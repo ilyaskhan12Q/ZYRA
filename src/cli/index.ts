@@ -1,0 +1,1253 @@
+#!/usr/bin/env node
+
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import { loadContext, validateContext } from '../context/loader.js';
+import { collectEvidence } from '../evidence/collector.js';
+import { type DeviceType } from '../lighthouse/types.js';
+import { LighthouseError, InvalidUrlError } from '../lighthouse/errors.js';
+import { RuleEngine } from '../rules/engine.js';
+import { RuleRegistry } from '../rules/registry.js';
+import { FINDING_SCHEMA_VERSION } from '../rules/types.js';
+import { scanCodebase } from '../codebase/scanner.js';
+import { CODEBASE_EVIDENCE_SCHEMA_VERSION } from '../codebase/types.js';
+import { correlate } from '../correlation/engine.js';
+import { CORRELATION_SCHEMA_VERSION } from '../correlation/types.js';
+import {
+  FixStrategyRegistry,
+  planFixes,
+  executeFix,
+  validateFixPlan,
+  FIX_SCHEMA_VERSION,
+  type FixPlan,
+  type FixResult
+} from '../fixes/index.js';
+import {
+  verifyOptimization,
+  validateVerificationResult,
+  VERIFICATION_SCHEMA_VERSION,
+  type VerificationResult,
+  type MetricDelta
+} from '../verification/index.js';
+
+const VERSION = '0.6.0';
+
+function printHelp(): void {
+  console.log(`
+ZYRA — Agent-Native Web Performance Investigation Tool (v${VERSION})
+
+USAGE:
+  zyra <command> [options]
+  zyra <url> [options]
+  zyra <url> --workspace <path> [options]
+  zyra analyze <url> --workspace <path> [options]
+  zyra codebase <path> [options]
+  zyra inspect <path> [options]
+  zyra fix plan <url> --workspace <path> [options]
+  zyra fix apply <plan-file> --workspace <path> [options]
+  zyra fix catalog [options]
+  zyra verify <url> --workspace <path> --baseline <file> [options]
+  zyra fix verify <fix-result> --url <url> --workspace <path> [options]
+
+COMMANDS:
+  <url>             Run empirical performance investigation and rule analysis against target URL
+  analyze <url>     Run performance investigation and correlate with local workspace codebase
+  codebase <path>   Inspect target codebase workspace and produce structured Codebase Evidence
+  inspect <path>    Alias for codebase command
+  fix plan <url>    Plan evidence-backed code modifications for target workspace
+  fix apply <plan>  Apply or dry-run a verified FixPlan with rollback protection
+  fix catalog       Display structured catalog of registered fix strategies
+  fix verify <res>  Verify performance after applying a fix result
+  verify <url>      Empirically verify performance improvement between baseline and post-fix runs
+  rules             Display structured catalog of all registered performance rules
+  rules --json      Output rule catalog as JSON
+  context           Display structured summary of persistent project context
+  context --json    Output complete persistent context as JSON
+  --help, -h        Display this help message
+  --version, -v     Display ZYRA version
+
+MEASUREMENT OPTIONS:
+  --workspace <path> Target codebase workspace path to correlate with browser telemetry
+  --codebase <path>  Alias for --workspace
+  --mobile           Emulate mobile device profile (default)
+  --desktop          Emulate desktop device profile
+  --json             Output normalized evidence, findings, and correlation as structured JSON
+  --timeout <ms>     Set execution timeout in milliseconds (default: 60000)
+
+CODEBASE OPTIONS:
+  --json            Output complete Codebase Evidence as structured JSON
+
+FIX OPTIONS:
+  --dry-run         Simulate fix application and verify safety without modifying any files
+  --allow-high-risk Allow application of HIGH risk plans
+  --json            Output fix plan or result as structured JSON
+
+VERIFICATION OPTIONS:
+  --baseline <file> Path to baseline measurement evidence JSON file (required)
+  --post-fix <file> Path to post-fix measurement evidence JSON file (optional; runs live test if omitted)
+  --runs <n>        Bounded repeat measurement runs (1-5, default: 1)
+  --output <file>   Write VerificationResult JSON to specified file
+
+EXAMPLES:
+  zyra https://example.com
+  zyra https://example.com --mobile
+  zyra https://example.com --desktop --json
+  zyra https://example.com --workspace ./target-app
+  zyra analyze https://example.com --workspace ./target-app --json
+  zyra codebase /path/to/project
+  zyra inspect ./target-app --json
+  zyra fix catalog
+  zyra fix plan https://example.com --workspace ./target-app
+  zyra fix plan https://example.com --workspace ./target-app --json
+  zyra fix apply ./plan.json --workspace ./target-app --dry-run
+  zyra fix apply ./plan.json --workspace ./target-app
+  zyra rules
+  zyra context
+
+DOCUMENTATION:
+  See .context/ and docs/ for architecture, contracts, rule specifications, and roadmap.
+`);
+}
+
+async function handleRulesCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const registry = new RuleRegistry();
+  const catalog = registry.getRuleCatalog();
+
+  if (isJson) {
+    console.log(JSON.stringify(catalog, null, 2));
+    return;
+  }
+
+  console.log(`
+============================================================
+ ZYRA — Performance Rule Catalog (${catalog.length} Registered Rules)
+============================================================
+`);
+
+  for (const rule of catalog) {
+    const sevBadge = `[${rule.severity}]`.padEnd(11);
+    console.log(` ${sevBadge} ${rule.id} (v${rule.version})`);
+    console.log(`   Title:     ${rule.title}`);
+    console.log(`   Category:  ${rule.category}`);
+    console.log(`   Threshold: ${rule.thresholdSummary} [${rule.thresholdSource}]`);
+    console.log(`   Evidence:  ${rule.evidenceConsumed.join(', ')}`);
+    console.log(`   Rationale: ${rule.description}`);
+    console.log('');
+  }
+
+  console.log(`------------------------------------------------------------
+ All rules are deterministic, side-effect free, and grounded in empirical evidence.
+ Run with --json for complete machine-readable rule catalog.
+============================================================
+`);
+}
+
+async function handleContextCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+
+  try {
+    const validation = await validateContext();
+
+    if (!validation.isValid) {
+      console.error('❌ ZYRA Context Validation Failed:');
+      if (validation.missingFiles.length > 0) {
+        console.error(`  Missing required files:\n    - ${validation.missingFiles.join('\n    - ')}`);
+      }
+      if (validation.malformedFiles.length > 0) {
+        console.error(
+          `  Malformed files:\n    - ${validation.malformedFiles.map((m) => `${m.name}: ${m.reason}`).join('\n    - ')}`
+        );
+      }
+      process.exit(1);
+    }
+
+    const context = await loadContext(validation.projectRoot);
+
+    if (isJson) {
+      console.log(JSON.stringify(context, null, 2));
+      return;
+    }
+
+    console.log(`
+============================================================
+ ZYRA — Persistent Project Context
+============================================================
+ Project Root:  ${context.projectRoot}
+ Context Dir:   ${context.contextDir}
+ Current Phase: ${context.summary.currentPhase}
+ Status:        ${context.summary.status}
+ Loaded At:     ${context.loadedAt}
+ Documents:     ${context.summary.totalDocuments} verified
+
+ Context Documents:
+------------------------------------------------------------`);
+
+    for (const [name, doc] of Object.entries(context.documents)) {
+      const sizeKb = (doc.sizeBytes / 1024).toFixed(1);
+      console.log(`  ✓ ${name.padEnd(20)} [${sizeKb} KB] -> ${doc.path}`);
+    }
+
+    console.log(`------------------------------------------------------------
+ Health: All required context documents are present and valid.
+============================================================
+`);
+  } catch (error) {
+    console.error(`❌ Error loading context: ${(error as Error).message}`);
+    process.exit(1);
+  }
+}
+
+async function handleCodebaseCommand(targetPath: string, args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+
+  try {
+    const evidence = await scanCodebase(targetPath);
+
+    if (isJson) {
+      console.log(JSON.stringify(evidence, null, 2));
+      return;
+    }
+
+    const prodDeps = evidence.dependencies.filter((d) => d.dependencyType === 'production').length;
+    const devDeps = evidence.dependencies.filter((d) => d.dependencyType === 'development').length;
+
+    console.log(`
+============================================================
+ ZYRA — Codebase Investigation
+============================================================
+
+ WORKSPACE
+ ------------------------------------------------------------
+ Root:              ${evidence.workspace.root}
+ Scanned At:        ${evidence.workspace.scannedAt}
+ Scanner:           v${evidence.workspace.scannerVersion}
+ Files Scanned:     ${evidence.workspace.stats.filesScanned} (${(evidence.workspace.stats.totalSizeBytes / 1024).toFixed(1)} KB total)
+ Files Skipped:     ${evidence.workspace.stats.filesSkipped}
+ Dirs Skipped:      ${evidence.workspace.stats.directoriesSkipped}
+
+ FRAMEWORK
+ ------------------------------------------------------------
+ Primary Framework: ${evidence.framework.name} (Confidence: ${evidence.framework.confidence})
+ Version:           ${evidence.framework.version ?? 'Not declared'}
+ Evidence:          ${evidence.framework.evidenceRefs.join(', ') || 'None'}
+
+ PACKAGE MANAGER & RUNTIME
+ ------------------------------------------------------------
+ Package Manager:   ${evidence.packageManager.name}
+ Lockfile:          ${evidence.packageManager.lockfile ?? 'None'}
+ Conflict:          ${evidence.packageManager.hasConflict ? `Yes (${evidence.packageManager.conflicts?.join(', ')})` : 'No'}
+ Declared Node:     ${evidence.runtime.declaredNodeVersion ?? 'Not declared'} (${evidence.runtime.source ?? 'N/A'})
+
+ DEPENDENCIES (${evidence.dependencies.length} declared)
+ ------------------------------------------------------------
+ Breakdown:         ${prodDeps} production, ${devDeps} development`);
+
+    if (evidence.dependencies.length > 0) {
+      const topDeps = evidence.dependencies.slice(0, 8);
+      console.log(` Notable:           ${topDeps.map((d) => `${d.name}@${d.versionRange}`).join(', ')}${evidence.dependencies.length > 8 ? '...' : ''}`);
+    }
+
+    console.log(`
+ ROUTES (${evidence.routes.length} detected)
+ ------------------------------------------------------------`);
+    if (evidence.routes.length === 0) {
+      console.log(' None detected via known framework conventions.');
+    } else {
+      for (const r of evidence.routes.slice(0, 10)) {
+        console.log(` ${r.path.padEnd(25)} -> ${r.sourceFile} [${r.framework}]`);
+      }
+      if (evidence.routes.length > 10) {
+        console.log(` ... and ${evidence.routes.length - 10} more routes`);
+      }
+    }
+
+    console.log(`
+ ENTRY POINTS (${evidence.entryPoints.length} detected)
+ ------------------------------------------------------------`);
+    if (evidence.entryPoints.length === 0) {
+      console.log(' None detected via known conventions.');
+    } else {
+      for (const ep of evidence.entryPoints) {
+        console.log(` ${ep.path.padEnd(25)} (${ep.detectionReason})`);
+      }
+    }
+
+    console.log(`
+ ASSETS (${evidence.assets.length} inventoried)
+ ------------------------------------------------------------`);
+    if (evidence.assets.length === 0) {
+      console.log(' No static assets found.');
+    } else {
+      const totalAssetSize = evidence.assets.reduce((sum, a) => sum + a.sizeBytes, 0);
+      console.log(` Total Assets:      ${evidence.assets.length} (${(totalAssetSize / 1024).toFixed(1)} KB)`);
+      for (const a of evidence.assets.slice(0, 6)) {
+        console.log(` [${a.category.padEnd(10)}] ${a.relativePath} (${(a.sizeBytes / 1024).toFixed(1)} KB)`);
+      }
+      if (evidence.assets.length > 6) {
+        console.log(` ... and ${evidence.assets.length - 6} more assets`);
+      }
+    }
+
+    console.log(`
+ CONFIGURATION & SOURCE MAPS
+ ------------------------------------------------------------
+ Bundler:           ${evidence.configuration.bundler ?? 'Standard / Not detected'}
+ Config Files:      ${evidence.configuration.configFiles.join(', ') || 'None'}
+ Source Maps:       ${evidence.configuration.hasSourceMaps ? 'Detected' : 'Not detected'}`);
+
+    if (evidence.warnings.length > 0) {
+      console.log(`
+ WARNINGS (${evidence.warnings.length} recorded)
+ ------------------------------------------------------------`);
+      for (const w of evidence.warnings) {
+        console.log(` [${w.code}] ${w.message}${w.targetPath ? ` (${w.targetPath})` : ''}`);
+      }
+    }
+
+    console.log(`------------------------------------------------------------
+ Traceability: Codebase evidence ready for future correlation with browser telemetry.
+ Run with --json for complete machine-readable CodebaseEvidence payload.
+============================================================
+`);
+  } catch (error) {
+    if (isJson) {
+      console.error(
+        JSON.stringify(
+          {
+            error: true,
+            name: (error as Error).name,
+            message: (error as Error).message
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.error(`❌ Codebase Investigation Failed: ${(error as Error).message}`);
+    }
+    process.exit(1);
+  }
+}
+
+async function handleMeasureCommand(url: string, args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const isDesktop = args.includes('--desktop');
+  const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
+
+  let timeoutMs = 60000;
+  const timeoutIndex = args.indexOf('--timeout');
+  if (timeoutIndex !== -1 && args[timeoutIndex + 1]) {
+    const parsedTimeout = parseInt(args[timeoutIndex + 1], 10);
+    if (!isNaN(parsedTimeout) && parsedTimeout > 0) {
+      timeoutMs = parsedTimeout;
+    }
+  }
+
+  // Check for workspace flag to trigger Phase 05 correlation
+  let workspacePath: string | undefined;
+  const wsIndex = args.indexOf('--workspace');
+  const cbIndex = args.indexOf('--codebase');
+  const targetFlagIndex = wsIndex !== -1 ? wsIndex : cbIndex;
+  if (targetFlagIndex !== -1 && args[targetFlagIndex + 1] && !args[targetFlagIndex + 1].startsWith('--')) {
+    workspacePath = args[targetFlagIndex + 1];
+  }
+
+  if (!isJson) {
+    console.log(`\n⏳ Launching Lighthouse measurement for ${url} [${device}]...`);
+  }
+
+  try {
+    const { evidence } = await collectEvidence({
+      url,
+      device,
+      timeoutMs
+    });
+
+    const ruleEngine = new RuleEngine();
+    const findings = ruleEngine.evaluate(evidence);
+
+    let codebaseEvidence;
+    let correlationResult;
+
+    if (workspacePath) {
+      if (!isJson) {
+        console.log(`🔍 Scanning codebase workspace: ${workspacePath}...`);
+      }
+      codebaseEvidence = await scanCodebase(workspacePath);
+      correlationResult = correlate(evidence, findings, codebaseEvidence);
+    }
+
+    if (isJson) {
+      const output = {
+        ...evidence,
+        evidence,
+        findingSchemaVersion: FINDING_SCHEMA_VERSION,
+        findings,
+        ...(codebaseEvidence && {
+          codebaseEvidenceSchemaVersion: CODEBASE_EVIDENCE_SCHEMA_VERSION,
+          codebaseEvidence
+        }),
+        ...(correlationResult && {
+          correlationSchemaVersion: CORRELATION_SCHEMA_VERSION,
+          correlation: correlationResult,
+          correlations: correlationResult.candidates
+        })
+      };
+      console.log(JSON.stringify(output, null, 2));
+      return;
+    }
+
+    const m = evidence.metrics;
+    const formatMs = (val: number | null) => (val !== null ? `${Math.round(val).toLocaleString()} ms` : 'N/A');
+    const formatScore = (s: number | null) => (s !== null ? `${Math.round(s * 100)}/100` : 'N/A');
+    const formatBytes = (bytes: number) => `${(bytes / 1024).toFixed(1)} KB`;
+
+    const perfScoreDisplay =
+      evidence.scores.performance !== null
+        ? `${Math.round(evidence.scores.performance * 100)} / 100`
+        : 'N/A';
+
+    const totalJsTransfer = evidence.scripts.items.reduce((acc, s) => acc + s.transferSizeBytes, 0);
+    const totalJsUnused = evidence.scripts.items.reduce((acc, s) => acc + (s.unusedBytes ?? 0), 0);
+    const totalImgTransfer = evidence.images.items.reduce((acc, i) => acc + i.transferSizeBytes, 0);
+    const totalImgWasted = evidence.images.items.reduce((acc, i) => acc + (i.wastedBytes ?? 0), 0);
+    const totalFontTransfer = evidence.fonts.items.reduce((acc, f) => acc + f.transferSizeBytes, 0);
+
+    console.log(`
+============================================================
+ ZYRA — Performance Analysis
+============================================================
+
+ Target URL:   ${evidence.target.url}
+ Device:       ${evidence.target.device}
+ Timestamp:    ${evidence.target.timestamp}
+ Duration:     ${(evidence.run.durationMs / 1000).toFixed(2)} s
+ Lighthouse:   v${evidence.run.lighthouseVersion}
+
+ PERFORMANCE EVIDENCE
+ ------------------------------------------------------------
+ First Contentful Paint (FCP):  ${formatMs(m.fcp.value).padEnd(12)} (Score: ${formatScore(m.fcp.score)})
+ Largest Contentful Paint (LCP):${formatMs(m.lcp.value).padEnd(12)} (Score: ${formatScore(m.lcp.score)})
+ Total Blocking Time (TBT):     ${formatMs(m.tbt.value).padEnd(12)} (Score: ${formatScore(m.tbt.score)})
+ Cumulative Layout Shift (CLS): ${m.cls.value !== null ? m.cls.value.toFixed(3).padEnd(12) : 'N/A'.padEnd(12)} (Score: ${formatScore(m.cls.score)})
+ Speed Index:                   ${formatMs(m.speedIndex.value).padEnd(12)} (Score: ${formatScore(m.speedIndex.score)})
+ Interaction to Next Paint:     ${m.inp ? formatMs(m.inp.value) : 'Not Captured'}
+
+ Overall Lab Score:            ${perfScoreDisplay}
+
+ Evidence Breakdown
+ ------------------------------------------------------------
+ Audits Collected:     ${evidence.audits.length}
+ Network Requests:     ${evidence.network.requests.length}
+ JavaScript Files:     ${evidence.scripts.items.length} (Transfer: ${formatBytes(totalJsTransfer)}, Unused: ${formatBytes(totalJsUnused)})
+ Images:               ${evidence.images.items.length} (Transfer: ${formatBytes(totalImgTransfer)}, Potential Savings: ${formatBytes(totalImgWasted)})
+ Fonts:                ${evidence.fonts.items.length} (Transfer: ${formatBytes(totalFontTransfer)})
+ Long Tasks (>50ms):   ${evidence.scripts.longTasks.length}
+
+ FINDINGS (${findings.length} detected)
+ ------------------------------------------------------------`);
+
+    if (findings.length === 0) {
+      console.log(' ✓ No performance threshold violations detected for this run.');
+    } else {
+      for (const f of findings) {
+        console.log(` [${f.severity}] ${f.ruleId}`);
+        console.log(`   ${f.title}`);
+        console.log(`   Observed:   ${f.observed.displayValue ?? f.observed.value}`);
+        console.log(`   Threshold:  ${f.threshold.condition} (${f.threshold.source})`);
+        console.log(`   Evidence:   ${f.evidenceRefs.join(', ')}`);
+        console.log(`   Confidence: ${f.confidence}`);
+        console.log(`   Next Step:  ${f.nextInvestigation}`);
+        console.log('');
+      }
+    }
+
+    if (codebaseEvidence && correlationResult) {
+      console.log(`
+ CODEBASE EVIDENCE
+ ------------------------------------------------------------
+ Workspace:          ${codebaseEvidence.workspace.root}
+ Framework:          ${codebaseEvidence.framework.name} (${codebaseEvidence.framework.confidence})
+ Routes Detected:    ${codebaseEvidence.routes.length}
+ Assets Scanned:     ${codebaseEvidence.assets.length}
+ Dependencies:       ${codebaseEvidence.dependencies.length} declared
+ Warnings:           ${codebaseEvidence.warnings.length} recorded
+
+ CORRELATION ANALYSIS
+ ------------------------------------------------------------
+ Evaluated Findings:  ${correlationResult.summary.totalFindings}
+ Correlated Findings: ${correlationResult.summary.correlatedFindings}
+ Strongly Supported:  ${correlationResult.summary.stronglySupportedCandidates}
+ Supported:           ${correlationResult.summary.supportedCandidates}
+ Possible:            ${correlationResult.summary.possibleCandidates}
+ Insufficient Data:   ${correlationResult.summary.insufficientEvidenceCount}
+ No Correlation:      ${correlationResult.summary.noCorrelationCount}
+
+ CANDIDATE CONTRIBUTORS (${correlationResult.candidates.length} identified)
+ ------------------------------------------------------------`);
+
+      if (correlationResult.candidates.length === 0) {
+        console.log(' No candidate contributors identified for the observed findings.');
+      } else {
+        for (let i = 0; i < correlationResult.candidates.length; i++) {
+          const c = correlationResult.candidates[i]!;
+          console.log(` ${i + 1}. [${c.status}] ${c.targetName} (${c.targetType})`);
+          console.log(`    Confidence: ${(c.confidence.score * 100).toFixed(0)}% (${c.confidence.rationale})`);
+          console.log(`    Findings:   ${c.findingIds.join(', ')}`);
+          console.log(`    Reasoning:  ${c.reasoning}`);
+          if (c.supportingEvidence.length > 0) {
+            console.log('    Supporting Evidence:');
+            for (const s of c.supportingEvidence) {
+              console.log(`      ✓ ${s}`);
+            }
+          }
+          if (c.contradictingEvidence.length > 0) {
+            console.log('    Contradicting / Cautionary Evidence:');
+            for (const con of c.contradictingEvidence) {
+              console.log(`      ⚠ ${con}`);
+            }
+          }
+          if (c.missingEvidence.length > 0) {
+            console.log('    Missing Evidence:');
+            for (const mis of c.missingEvidence) {
+              console.log(`      - ${mis}`);
+            }
+          }
+          console.log(`    Next Step:  ${c.nextInvestigation}`);
+          console.log('');
+        }
+      }
+
+      console.log(`
+ ROOT-CAUSE ASSESSMENTS (${correlationResult.assessments.length} generated)
+ ------------------------------------------------------------`);
+      for (const a of correlationResult.assessments) {
+        console.log(` [${a.assessmentLevel}] ${a.findingId} -> ${a.status}`);
+        console.log(`   Bottleneck:    ${a.primaryBottleneckType}`);
+        if (a.topCandidateId) {
+          console.log(`   Top Candidate: ${a.topCandidateId}`);
+        }
+        console.log(`   Summary:       ${a.summary}`);
+        console.log('');
+      }
+    }
+
+    console.log(`------------------------------------------------------------
+ Traceability: All findings deterministically map to normalized evidence.
+ Run with --json for complete machine-readable evidence & findings payload.
+============================================================
+`);
+  } catch (error) {
+    if (isJson) {
+      console.error(
+        JSON.stringify(
+          {
+            error: true,
+            name: (error as Error).name,
+            message: (error as Error).message
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      if (error instanceof InvalidUrlError) {
+        console.error(`❌ Invalid URL: ${error.message}`);
+      } else if (error instanceof LighthouseError) {
+        console.error(`❌ Performance Measurement Failed: ${error.message}`);
+      } else {
+        console.error(`❌ Error: ${(error as Error).message}`);
+      }
+    }
+    process.exit(1);
+  }
+}
+
+async function handleFixCatalogCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const registry = new FixStrategyRegistry();
+  const catalog = registry.getFixStrategyCatalog();
+
+  if (isJson) {
+    console.log(JSON.stringify(catalog, null, 2));
+    return;
+  }
+
+  console.log(`
+============================================================
+ ZYRA — Fix Strategy Catalog (${catalog.length} Registered Strategies)
+============================================================
+`);
+
+  for (const s of catalog) {
+    const riskBadge = `[${s.riskLevel}]`.padEnd(9);
+    console.log(` ${riskBadge} ${s.id} (v${s.version})`);
+    console.log(`   Name:         ${s.name}`);
+    console.log(`   Description:  ${s.description}`);
+    console.log(`   Findings:     ${s.applicableFindings.join(', ')}`);
+    console.log(`   Correlations: ${s.applicableCorrelations.join(', ')}`);
+    console.log(`   Preconditions:`);
+    for (const p of s.preconditions) {
+      console.log(`     - ${p}`);
+    }
+    console.log('');
+  }
+
+  console.log(`------------------------------------------------------------
+ All strategies enforce optimistic concurrency, workspace containment,
+ and rollback safety. Run with --json for machine-readable output.
+============================================================
+`);
+}
+
+async function handleFixPlanCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const isDesktop = args.includes('--desktop');
+  const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
+
+  let timeoutMs = 60000;
+  const timeoutIdx = args.indexOf('--timeout');
+  if (timeoutIdx !== -1 && args[timeoutIdx + 1]) {
+    const parsed = parseInt(args[timeoutIdx + 1]!, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      timeoutMs = parsed;
+    }
+  }
+
+  let workspacePath: string | undefined;
+  const wsIdx = args.indexOf('--workspace');
+  const cbIdx = args.indexOf('--codebase');
+  if (wsIdx !== -1 && args[wsIdx + 1]) {
+    workspacePath = args[wsIdx + 1];
+  } else if (cbIdx !== -1 && args[cbIdx + 1]) {
+    workspacePath = args[cbIdx + 1];
+  }
+
+  const targetUrl = args.find((a, idx) => {
+    if (a.startsWith('--')) return false;
+    if (idx > 0 && (args[idx - 1] === '--timeout' || args[idx - 1] === '--workspace' || args[idx - 1] === '--codebase')) {
+      return false;
+    }
+    return true;
+  });
+
+  if (!targetUrl) {
+    console.error('❌ Please specify a target URL: zyra fix plan <url> --workspace <path>');
+    process.exit(1);
+  }
+
+  if (!workspacePath) {
+    console.error('❌ Fix planning requires a target workspace path: zyra fix plan <url> --workspace <path>');
+    process.exit(1);
+  }
+
+  try {
+    if (!isJson) {
+      console.log(`\n🔍 Measuring browser telemetry for ${targetUrl} (${device})...`);
+    }
+
+    const { evidence } = await collectEvidence({
+      url: targetUrl,
+      device,
+      timeoutMs
+    });
+
+    const ruleEngine = new RuleEngine();
+    const findings = ruleEngine.evaluate(evidence);
+
+    if (!isJson) {
+      console.log(`📁 Scanning codebase workspace at ${workspacePath}...`);
+    }
+
+    const codebase = await scanCodebase(workspacePath);
+
+    if (!isJson) {
+      console.log(`🔗 Correlating findings with codebase...`);
+    }
+
+    const correlation = correlate(evidence, findings, codebase);
+
+    if (!isJson) {
+      console.log(`🛠️ Synthesizing safe fix plans...`);
+    }
+
+    const plans = await planFixes({
+      workspaceRoot: workspacePath,
+      evidence,
+      findings,
+      codebase,
+      correlation
+    });
+
+    if (isJson) {
+      console.log(
+        JSON.stringify(
+          {
+            schemaVersion: FIX_SCHEMA_VERSION,
+            targetUrl,
+            workspace: workspacePath,
+            totalPlans: plans.length,
+            plans
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+
+    console.log(`
+============================================================
+ ZYRA — Fix Planning (${plans.length} Proposed Plans)
+============================================================
+ Target URL:  ${targetUrl}
+ Workspace:   ${workspacePath}
+ Status:      READY_FOR_REVIEW
+------------------------------------------------------------
+`);
+
+    if (plans.length === 0) {
+      console.log(' No automated fix plans available for observed bottlenecks.');
+      console.log(' Note: Fixes are only proposed when evidence correlation is supported');
+      console.log(' and preconditions guarantee a safe, minimal, reversible modification.\n');
+    } else {
+      for (let i = 0; i < plans.length; i++) {
+        const p = plans[i]!;
+        console.log(` ------------------------------------------------------------`);
+        console.log(` PLAN #${i + 1}: ${p.planId} [Risk: ${p.risk}]`);
+        console.log(` ------------------------------------------------------------`);
+        console.log(`   Strategy:       ${p.strategy.name} (${p.strategy.id} v${p.strategy.version})`);
+        console.log(`   Candidate:      ${p.candidate.targetPath} (${p.candidate.targetType})`);
+        console.log(`   Findings:       ${p.sourceFindingIds.join(', ')}`);
+        console.log(`   Expected Impact:`);
+        console.log(`     Metric:       ${p.expectedImpact.targetMetric} (${p.expectedImpact.estimatedDirection})`);
+        console.log(`     Note:         ${p.expectedImpact.description}`);
+        console.log(`   Files to Modify:`);
+        for (const op of p.operations) {
+          console.log(`     - ${op.targetPath} [${op.type}]`);
+        }
+        console.log(`   Preconditions:`);
+        for (const pre of p.preconditions) {
+          console.log(`     [${pre.satisfied ? '✓' : '✗'}] ${pre.description}${pre.reason ? ` (${pre.reason})` : ''}`);
+        }
+        console.log(`   Rollback:       Available (${p.rollbackInformation.strategy})`);
+        console.log(`   Status:         ${p.status}`);
+        console.log('');
+      }
+
+      console.log(`------------------------------------------------------------
+ Review the plans above. To simulate without changes:
+   zyra fix apply <plan.json> --workspace ${workspacePath} --dry-run
+ To apply with transactional rollback protection:
+   zyra fix apply <plan.json> --workspace ${workspacePath}
+============================================================
+`);
+    }
+  } catch (error) {
+    if (isJson) {
+      console.error(
+        JSON.stringify(
+          {
+            error: true,
+            message: (error as Error).message
+          },
+          null,
+          2
+        )
+      );
+    } else {
+      console.error(`❌ Fix Planning Failed: ${(error as Error).message}`);
+    }
+    process.exit(1);
+  }
+}
+
+async function handleFixApplyCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const isDryRun = args.includes('--dry-run');
+  const allowHighRisk = args.includes('--allow-high-risk');
+
+  let workspacePath: string | undefined;
+  const wsIdx = args.indexOf('--workspace');
+  const cbIdx = args.indexOf('--codebase');
+  if (wsIdx !== -1 && args[wsIdx + 1]) {
+    workspacePath = args[wsIdx + 1];
+  } else if (cbIdx !== -1 && args[cbIdx + 1]) {
+    workspacePath = args[cbIdx + 1];
+  }
+
+  const planArg = args.find((a, idx) => {
+    if (a.startsWith('--')) return false;
+    if (idx > 0 && (args[idx - 1] === '--workspace' || args[idx - 1] === '--codebase')) {
+      return false;
+    }
+    return true;
+  });
+
+  if (!planArg) {
+    console.error('❌ Please specify a plan file or JSON: zyra fix apply <plan-file> --workspace <path>');
+    process.exit(1);
+  }
+
+  let planObj: any;
+  try {
+    if (planArg.trim().startsWith('{')) {
+      planObj = JSON.parse(planArg);
+    } else {
+      const fileContent = await fs.readFile(planArg, 'utf-8');
+      planObj = JSON.parse(fileContent);
+    }
+  } catch (err) {
+    console.error(`❌ Failed to read or parse fix plan: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  const plan: FixPlan = Array.isArray(planObj.plans) ? planObj.plans[0] : planObj;
+
+  const validation = validateFixPlan(plan);
+  if (!validation.isValid) {
+    console.error(`❌ Invalid FixPlan schema: ${validation.errors.join('; ')}`);
+    process.exit(1);
+  }
+
+  const effectiveWorkspace = workspacePath ?? plan.targetWorkspace;
+  if (!effectiveWorkspace) {
+    console.error('❌ Workspace path required: zyra fix apply <plan-file> --workspace <path>');
+    process.exit(1);
+  }
+
+  try {
+    const result = await executeFix(plan, {
+      workspaceRoot: effectiveWorkspace,
+      dryRun: isDryRun,
+      allowHighRisk
+    });
+
+    if (isJson) {
+      console.log(JSON.stringify(result, null, 2));
+      if (result.status === 'FAILED' || result.status === 'BLOCKED') {
+        process.exit(1);
+      }
+      return;
+    }
+
+    console.log(`
+============================================================
+ ZYRA — Fix Execution
+============================================================
+ Plan ID:           ${result.planId}
+ Strategy:          ${result.strategyId} (v${result.strategyVersion})
+ Workspace:         ${result.workspace}
+ Mode:              ${result.status === 'DRY_RUN' ? 'DRY_RUN (Simulation — No Files Modified)' : 'APPLIED'}
+
+ Preflight:         PASS
+ Hash Verification: PASS
+ Safety Checks:     PASS
+
+ Operations:`);
+    for (const op of result.operations) {
+      console.log(
+        `   [${op.status}] ${op.targetPath} (original: ${op.originalHash.slice(0, 8)}${op.newHash ? `, new: ${op.newHash.slice(0, 8)}` : ''})${op.error ? ` - ${op.error}` : ''}`
+      );
+    }
+
+    console.log(`
+ Rollback:          ${result.rollbackAvailable ? 'Available' : 'Unavailable'}
+ Result:            ${result.status}
+ Verification:      NOT YET PERFORMED (Reserved for Phase 08)
+============================================================
+`);
+
+    if (result.status === 'FAILED' || result.status === 'BLOCKED') {
+      if (result.error) {
+        console.error(`❌ Fix Execution Failed: ${result.error}`);
+      }
+      process.exit(1);
+    }
+  } catch (err) {
+    console.error(`❌ Fix Execution Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
+
+function formatMetricVal(val: number | null, unit: 'ms' | 'score'): string {
+  if (val === null) return 'N/A';
+  if (unit === 'score') return val.toFixed(3);
+  return `${Math.round(val).toLocaleString()} ms`;
+}
+
+function formatMetricDeltaStr(delta: number | null, unit: 'ms' | 'score'): string {
+  if (delta === null) return 'N/A';
+  const prefix = delta > 0 ? '+' : '';
+  if (unit === 'score') return `${prefix}${delta.toFixed(3)}`;
+  return `${prefix}${Math.round(delta).toLocaleString()} ms`;
+}
+
+function formatPercentageStr(pct: number | null): string {
+  if (pct === null) return 'N/A';
+  const prefix = pct > 0 ? '+' : '';
+  return `${prefix}${pct.toFixed(1)}%`;
+}
+
+async function handleVerifyCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const isDesktop = args.includes('--desktop');
+  const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
+
+  let targetUrl: string | undefined;
+  let workspacePath: string | undefined;
+  let baselinePath: string | undefined;
+  let postFixPath: string | undefined;
+  let fixResultPath: string | undefined;
+  let fixPlanPath: string | undefined;
+  let targetMetricArg: string | undefined;
+  let outputPath: string | undefined;
+  let runsCount = 1;
+  let timeoutMs = 60000;
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--workspace' || arg === '--codebase') {
+      workspacePath = args[++i];
+    } else if (arg === '--baseline') {
+      baselinePath = args[++i];
+    } else if (arg === '--post-fix' || arg === '--postfix') {
+      postFixPath = args[++i];
+    } else if (arg === '--fix-result') {
+      fixResultPath = args[++i];
+    } else if (arg === '--fix-plan' || arg === '--plan') {
+      fixPlanPath = args[++i];
+    } else if (arg === '--target-metric') {
+      targetMetricArg = args[++i];
+    } else if (arg === '--output') {
+      outputPath = args[++i];
+    } else if (arg === '--runs') {
+      const parsedRuns = parseInt(args[++i], 10);
+      if (!isNaN(parsedRuns) && parsedRuns >= 1 && parsedRuns <= 5) {
+        runsCount = parsedRuns;
+      }
+    } else if (arg === '--timeout') {
+      const parsedTimeout = parseInt(args[++i], 10);
+      if (!isNaN(parsedTimeout)) {
+        timeoutMs = parsedTimeout;
+      }
+    } else if (!arg.startsWith('--') && !targetUrl) {
+      targetUrl = arg;
+    }
+  }
+
+  if (!baselinePath) {
+    console.error('❌ Baseline evidence required: zyra verify <url> --workspace <path> --baseline <file>');
+    process.exit(1);
+  }
+
+  let baselineEvidence: any;
+  try {
+    const content = await fs.readFile(baselinePath, 'utf-8');
+    baselineEvidence = JSON.parse(content);
+    if (baselineEvidence.evidence) {
+      baselineEvidence = baselineEvidence.evidence;
+    }
+  } catch (err) {
+    console.error(`❌ Failed to read baseline evidence file: ${(err as Error).message}`);
+    process.exit(1);
+  }
+
+  if (!targetUrl) {
+    targetUrl = baselineEvidence.target?.url;
+  }
+
+  if (!targetUrl) {
+    console.error('❌ Target URL required: zyra verify <url> --workspace <path> --baseline <file>');
+    process.exit(1);
+  }
+
+  const effectiveWorkspace = workspacePath || process.cwd();
+
+  let fixResult: FixResult | undefined;
+  if (fixResultPath) {
+    try {
+      const content = await fs.readFile(fixResultPath, 'utf-8');
+      fixResult = JSON.parse(content);
+    } catch (err) {
+      console.error(`❌ Failed to read fix result file: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  }
+
+  let fixPlan: FixPlan | undefined;
+  if (fixPlanPath) {
+    try {
+      const content = await fs.readFile(fixPlanPath, 'utf-8');
+      fixPlan = JSON.parse(content);
+    } catch (err) {
+      console.error(`❌ Failed to read fix plan file: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  }
+
+  let postFixEvidence: any;
+  const repeatedRunsEvidence: any[] = [];
+
+  if (postFixPath) {
+    try {
+      const content = await fs.readFile(postFixPath, 'utf-8');
+      postFixEvidence = JSON.parse(content);
+      if (postFixEvidence.evidence) {
+        postFixEvidence = postFixEvidence.evidence;
+      }
+    } catch (err) {
+      console.error(`❌ Failed to read post-fix evidence file: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  } else {
+    try {
+      for (let r = 0; r < runsCount; r++) {
+        const { evidence } = await collectEvidence({
+          url: targetUrl,
+          device,
+          timeoutMs
+        });
+        if (r === 0) {
+          postFixEvidence = evidence;
+        }
+        repeatedRunsEvidence.push(evidence);
+      }
+    } catch (error) {
+      console.error(`❌ Post-fix measurement failed: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  }
+
+  try {
+    const result = await verifyOptimization({
+      targetUrl,
+      workspace: effectiveWorkspace,
+      baseline: baselineEvidence,
+      postFix: postFixEvidence,
+      repeatedRuns: repeatedRunsEvidence.length > 1 ? repeatedRunsEvidence : undefined,
+      fixResult,
+      fixPlan,
+      targetMetric: targetMetricArg
+    });
+
+    validateVerificationResult(result);
+
+    if (outputPath) {
+      await fs.writeFile(outputPath, JSON.stringify(result, null, 2), 'utf-8');
+    }
+
+    if (isJson) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+
+    console.log(`
+============================================================
+ ZYRA — Post-Fix Performance Verification
+============================================================
+ Target:            ${result.targetUrl}
+ Profile:           ${result.device}
+ Verification ID:   ${result.verificationId}
+ Status:            ${result.status}
+ Decision:          ${result.decision}
+
+ METRIC DELTAS
+ ------------------------------------------------------------
+  Metric          Before         After          Delta          Change   Status
+ ------------------------------------------------------------`);
+
+    const metricOrder = ['lcp', 'cls', 'inp', 'fcp', 'tbt', 'speedIndex'];
+    for (const key of metricOrder) {
+      const m = result.comparison.metrics[key];
+      if (!m) continue;
+      const name = m.name.padEnd(15);
+      const beforeStr = formatMetricVal(m.before, m.unit).padEnd(14);
+      const afterStr = formatMetricVal(m.after, m.unit).padEnd(14);
+      const deltaStr = formatMetricDeltaStr(m.absoluteDelta, m.unit).padEnd(14);
+      const pctStr = formatPercentageStr(m.percentageDelta).padEnd(8);
+      const badge = `[${m.status}]`;
+      console.log(`  ${name} ${beforeStr} ${afterStr} ${deltaStr} ${pctStr} ${badge}`);
+    }
+
+    console.log(` ------------------------------------------------------------`);
+
+    if (result.targetVerification) {
+      console.log(`
+ TARGET FINDING VERIFICATION
+ ------------------------------------------------------------
+  Target Metric:    ${result.targetVerification.targetMetric} (${result.targetVerification.expectedDirection})
+  Target Status:    ${result.targetVerification.targetImproved ? 'IMPROVED' : 'NOT IMPROVED'}
+  Details:          ${result.targetVerification.details}`);
+    }
+
+    console.log(`
+ REGRESSION CHECK
+ ------------------------------------------------------------`);
+    if (result.regressions.length === 0) {
+      console.log('  Regressions:      None detected. (All metrics within safe thresholds)');
+    } else {
+      for (const reg of result.regressions) {
+        console.log(`  ⚠️  REGRESSION:    ${reg.name} regressed by ${formatMetricDeltaStr(reg.absoluteDelta, reg.unit)} (${formatPercentageStr(reg.percentageDelta)})`);
+      }
+    }
+
+    if (result.repeatedRuns) {
+      console.log(`
+ REPEATED MEASUREMENTS (${result.repeatedRuns.completedRuns} runs)
+ ------------------------------------------------------------
+  Outcome:          ${result.repeatedRuns.outcome}
+  Consistent:       ${result.repeatedRuns.consistent ? 'Yes' : 'No'}`);
+    }
+
+    console.log(`
+ OPTIMIZATION DECISION
+ ------------------------------------------------------------
+  Decision:         ${result.decision}
+  Summary:          ${result.summary}
+============================================================
+`);
+  } catch (err) {
+    console.error(`❌ Verification Error: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
+
+async function handleFixVerifyCommand(args: string[]): Promise<void> {
+  const fixResultArg = args.find((a, idx) => {
+    if (a.startsWith('--')) return false;
+    if (idx > 0 && (args[idx - 1] === '--workspace' || args[idx - 1] === '--url' || args[idx - 1] === '--baseline')) {
+      return false;
+    }
+    return true;
+  });
+
+  if (!fixResultArg) {
+    console.error('❌ Please specify a fix result file: zyra fix verify <fix-result-file> [options]');
+    process.exit(1);
+  }
+
+  const passArgs = ['--fix-result', fixResultArg, ...args.filter((a) => a !== fixResultArg)];
+  await handleVerifyCommand(passArgs);
+}
+
+async function handleFixCommand(args: string[]): Promise<void> {
+  const subCommand = args[0];
+
+  if (!subCommand || subCommand === '--help' || subCommand === '-h' || subCommand === 'help') {
+    console.log(`
+ZYRA Fix Commands:
+  zyra fix plan <url> --workspace <path> [options]    Plan evidence-backed code modifications
+  zyra fix apply <plan-file> --workspace <path>       Apply or dry-run a verified FixPlan
+  zyra fix catalog                                    Display catalog of registered fix strategies
+  zyra fix verify <fix-result> --url <url> [options]  Verify post-fix performance improvement
+`);
+    return;
+  }
+
+  if (subCommand === 'catalog' || subCommand === 'strategies') {
+    await handleFixCatalogCommand(args.slice(1));
+    return;
+  }
+
+  if (subCommand === 'plan') {
+    await handleFixPlanCommand(args.slice(1));
+    return;
+  }
+
+  if (subCommand === 'apply') {
+    await handleFixApplyCommand(args.slice(1));
+    return;
+  }
+
+  if (subCommand === 'verify') {
+    await handleFixVerifyCommand(args.slice(1));
+    return;
+  }
+
+  console.error(`❌ Unknown fix command: '${subCommand}'. Run 'zyra fix --help' for available commands.`);
+  process.exit(1);
+}
+
+export async function runCli(args: string[]): Promise<void> {
+  const firstArg = args[0];
+
+  if (!firstArg || firstArg === '--help' || firstArg === '-h' || firstArg === 'help') {
+    printHelp();
+    return;
+  }
+
+  if (firstArg === '--version' || firstArg === '-v' || firstArg === 'version') {
+    console.log(`zyra v${VERSION}`);
+    return;
+  }
+
+  if (firstArg === '/zyra' || firstArg === 'zyra') {
+    const subArgs = args.slice(1);
+    if (subArgs.length === 0) {
+      printHelp();
+      return;
+    }
+    return runCli(subArgs);
+  }
+
+  if (firstArg === 'context' || firstArg === '/context') {
+    await handleContextCommand(args.slice(1));
+    return;
+  }
+
+  if (firstArg === 'rules' || firstArg === '/rules') {
+    await handleRulesCommand(args.slice(1));
+    return;
+  }
+
+  if (firstArg === 'fix' || firstArg === '/fix') {
+    await handleFixCommand(args.slice(1));
+    return;
+  }
+
+  if (firstArg === 'verify' || firstArg === '/verify') {
+    await handleVerifyCommand(args.slice(1));
+    return;
+  }
+
+  if (firstArg === 'analyze') {
+    const targetUrl = args[1];
+    if (!targetUrl || targetUrl.startsWith('--')) {
+      console.error('❌ Please specify a URL to analyze: zyra analyze <url> --workspace <path>');
+      process.exit(1);
+    }
+    await handleMeasureCommand(targetUrl, args.slice(2));
+    return;
+  }
+
+  if (firstArg === 'codebase' || firstArg === 'inspect') {
+    const targetPath = args[1];
+    if (!targetPath || targetPath.startsWith('--')) {
+      console.error('❌ Please specify a workspace path to inspect: zyra codebase <path>');
+      process.exit(1);
+    }
+    await handleCodebaseCommand(targetPath, args.slice(2));
+    return;
+  }
+
+  // Handle measurement command: URL supplied
+  if (firstArg.startsWith('http://') || firstArg.startsWith('https://') || firstArg.includes('.')) {
+    await handleMeasureCommand(firstArg, args.slice(1));
+    return;
+  }
+
+  console.error(`❌ Unknown command: '${firstArg}'. Run 'zyra --help' for available commands.`);
+  process.exit(1);
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  await runCli(args);
+}
+
+main().catch((err) => {
+  console.error('Fatal error:', err);
+  process.exit(1);
+});

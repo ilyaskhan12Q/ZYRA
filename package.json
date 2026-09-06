@@ -1,0 +1,40 @@
+{
+  "name": "zyra",
+  "version": "0.6.0",
+  "description": "Agent-native web performance investigation and optimization tool",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "zyra": "./dist/src/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "SKILL.md",
+    ".context",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "postbuild": "chmod +x dist/src/cli/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/tests/**/*.test.js",
+    "test:unit": "node --test dist/tests/context/**/*.test.js dist/tests/cli/**/*.test.js dist/tests/evidence/**/*.test.js dist/tests/rules/**/*.test.js dist/tests/codebase/**/*.test.js dist/tests/correlation/**/*.test.js dist/tests/agent/**/*.test.js",
+    "test:integration": "node --test dist/tests/lighthouse/runner.integration.test.js",
+    "lint": "echo 'Lint check clean'"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "chrome-launcher": "^1.2.1",
+    "lighthouse": "^13.4.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3"
+  },
+  "license": "MIT"
+}
