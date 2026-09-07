@@ -1,0 +1,207 @@
+{
+  "_meta": "SYNTHETIC TEST DATA — Not from an actual measurement",
+  "lighthouseVersion": "13.4.1",
+  "userAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
+  "environment": {
+    "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
+    "hostUserAgent": "Mozilla/5.0 (X11; Linux x86_64)",
+    "benchmarkIndex": 1250
+  },
+  "requestedUrl": "https://example.com/",
+  "finalDisplayedUrl": "https://example.com/",
+  "categories": {
+    "performance": {
+      "id": "performance",
+      "title": "Performance",
+      "score": 0.42
+    }
+  },
+  "audits": {
+    "first-contentful-paint": {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "description": "First Contentful Paint marks the time at which the first text or image is painted.",
+      "score": 0.35,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 4100,
+      "numericUnit": "millisecond",
+      "displayValue": "4.1 s"
+    },
+    "largest-contentful-paint": {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "description": "Largest Contentful Paint marks the time at which the largest text or image is painted.",
+      "score": 0.22,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 5500,
+      "numericUnit": "millisecond",
+      "displayValue": "5.5 s"
+    },
+    "total-blocking-time": {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "description": "Sum of all time periods between FCP and Time to Interactive.",
+      "score": 0.05,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 28710,
+      "numericUnit": "millisecond",
+      "displayValue": "28,710 ms"
+    },
+    "cumulative-layout-shift": {
+      "id": "cumulative-layout-shift",
+      "title": "Cumulative Layout Shift",
+      "description": "Cumulative Layout Shift measures the movement of visible elements.",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0,
+      "numericUnit": "unitless",
+      "displayValue": "0"
+    },
+    "speed-index": {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "description": "Speed Index shows how quickly the contents of a page are visibly populated.",
+      "score": 0.30,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 6200,
+      "numericUnit": "millisecond",
+      "displayValue": "6.2 s"
+    },
+    "interaction-to-next-paint": {
+      "id": "interaction-to-next-paint",
+      "title": "Interaction to Next Paint",
+      "description": "Interaction to Next Paint measures responsiveness.",
+      "score": 0.85,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 180,
+      "numericUnit": "millisecond",
+      "displayValue": "180 ms"
+    },
+    "resource-summary": {
+      "id": "resource-summary",
+      "title": "Resource Summary",
+      "description": "Aggregated summary of page resources.",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "table",
+        "items": [
+          { "resourceType": "total", "label": "Total", "requestCount": 5, "transferSize": 1250000 },
+          { "resourceType": "script", "label": "Script", "requestCount": 2, "transferSize": 650000 },
+          { "resourceType": "image", "label": "Image", "requestCount": 1, "transferSize": 450000 },
+          { "resourceType": "stylesheet", "label": "Stylesheet", "requestCount": 1, "transferSize": 100000 },
+          { "resourceType": "document", "label": "Document", "requestCount": 1, "transferSize": 50000 }
+        ]
+      }
+    },
+    "network-requests": {
+      "id": "network-requests",
+      "title": "Network Requests",
+      "description": "Lists the network requests made during page load.",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "table",
+        "items": [
+          {
+            "url": "https://example.com/",
+            "protocol": "h2",
+            "resourceType": "Document",
+            "mimeType": "text/html",
+            "statusCode": 200,
+            "transferSize": 50000,
+            "resourceSize": 120000,
+            "priority": "VeryHigh",
+            "networkRequestTime": 10,
+            "networkEndTime": 150
+          },
+          {
+            "url": "https://example.com/assets/app.js",
+            "protocol": "h2",
+            "resourceType": "Script",
+            "mimeType": "application/javascript",
+            "statusCode": 200,
+            "transferSize": 450000,
+            "resourceSize": 1200000,
+            "priority": "High",
+            "networkRequestTime": 160,
+            "networkEndTime": 600
+          },
+          {
+            "url": "https://example.com/assets/vendor.js",
+            "protocol": "h2",
+            "resourceType": "Script",
+            "mimeType": "application/javascript",
+            "statusCode": 200,
+            "transferSize": 200000,
+            "resourceSize": 500000,
+            "priority": "High",
+            "networkRequestTime": 170,
+            "networkEndTime": 450
+          },
+          {
+            "url": "https://example.com/images/hero.jpg",
+            "protocol": "h2",
+            "resourceType": "Image",
+            "mimeType": "image/jpeg",
+            "statusCode": 200,
+            "transferSize": 450000,
+            "resourceSize": 450000,
+            "priority": "Medium",
+            "networkRequestTime": 200,
+            "networkEndTime": 800
+          },
+          {
+            "url": "https://example.com/styles/main.css",
+            "protocol": "h2",
+            "resourceType": "Stylesheet",
+            "mimeType": "text/css",
+            "statusCode": 200,
+            "transferSize": 100000,
+            "resourceSize": 250000,
+            "priority": "VeryHigh",
+            "networkRequestTime": 155,
+            "networkEndTime": 300
+          }
+        ]
+      }
+    },
+    "unused-javascript": {
+      "id": "unused-javascript",
+      "title": "Reduce unused JavaScript",
+      "description": "Reduce unused JavaScript and defer loading scripts until they are required.",
+      "score": 0.40,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 350000,
+      "details": {
+        "items": [
+          { "url": "https://example.com/assets/app.js", "wastedBytes": 250000 },
+          { "url": "https://example.com/assets/vendor.js", "wastedBytes": 100000 }
+        ]
+      }
+    },
+    "long-tasks": {
+      "id": "long-tasks",
+      "title": "Long Tasks",
+      "description": "Main-thread tasks exceeding 50ms.",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "items": [
+          { "url": "https://example.com/assets/app.js", "startTime": 700, "duration": 450 },
+          { "url": "https://example.com/assets/vendor.js", "startTime": 1200, "duration": 180 }
+        ]
+      }
+    },
+    "modern-image-formats": {
+      "id": "modern-image-formats",
+      "title": "Serve images in next-gen formats",
+      "score": 0.50,
+      "details": {
+        "items": [
+          { "url": "https://example.com/images/hero.jpg", "wastedBytes": 280000 }
+        ]
+      }
+    }
+  }
+}

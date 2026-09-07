@@ -1,0 +1,133 @@
+{
+  "_meta": "SYNTHETIC TEST DATA — Not from an actual measurement",
+  "lighthouseVersion": "13.4.1",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+  "environment": {
+    "networkUserAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "hostUserAgent": "Mozilla/5.0 (X11; Linux x86_64)",
+    "benchmarkIndex": 2100
+  },
+  "requestedUrl": "https://desktop.example.com/",
+  "finalDisplayedUrl": "https://desktop.example.com/",
+  "categories": {
+    "performance": {
+      "id": "performance",
+      "title": "Performance",
+      "score": 0.94
+    }
+  },
+  "audits": {
+    "first-contentful-paint": {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "description": "First Contentful Paint marks the time at which the first text or image is painted.",
+      "score": 0.98,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 650,
+      "numericUnit": "millisecond",
+      "displayValue": "0.7 s"
+    },
+    "largest-contentful-paint": {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "description": "Largest Contentful Paint marks the time at which the largest text or image is painted.",
+      "score": 0.95,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1100,
+      "numericUnit": "millisecond",
+      "displayValue": "1.1 s"
+    },
+    "total-blocking-time": {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "description": "Sum of all time periods between FCP and Time to Interactive.",
+      "score": 0.99,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 25,
+      "numericUnit": "millisecond",
+      "displayValue": "30 ms"
+    },
+    "cumulative-layout-shift": {
+      "id": "cumulative-layout-shift",
+      "title": "Cumulative Layout Shift",
+      "description": "Cumulative Layout Shift measures the movement of visible elements.",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0.02,
+      "numericUnit": "unitless",
+      "displayValue": "0.02"
+    },
+    "speed-index": {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "description": "Speed Index shows how quickly the contents of a page are visibly populated.",
+      "score": 0.96,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 920,
+      "numericUnit": "millisecond",
+      "displayValue": "0.9 s"
+    },
+    "resource-summary": {
+      "id": "resource-summary",
+      "title": "Resource Summary",
+      "description": "Aggregated summary of page resources.",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "items": [
+          { "resourceType": "total", "label": "Total", "requestCount": 3, "transferSize": 250000 },
+          { "resourceType": "script", "label": "Script", "requestCount": 1, "transferSize": 120000 },
+          { "resourceType": "stylesheet", "label": "Stylesheet", "requestCount": 1, "transferSize": 40000 },
+          { "resourceType": "document", "label": "Document", "requestCount": 1, "transferSize": 90000 }
+        ]
+      }
+    },
+    "network-requests": {
+      "id": "network-requests",
+      "title": "Network Requests",
+      "description": "Lists the network requests made during page load.",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "items": [
+          {
+            "url": "https://desktop.example.com/",
+            "protocol": "h2",
+            "resourceType": "Document",
+            "mimeType": "text/html",
+            "statusCode": 200,
+            "transferSize": 90000,
+            "resourceSize": 90000,
+            "priority": "VeryHigh",
+            "networkRequestTime": 5,
+            "networkEndTime": 45
+          },
+          {
+            "url": "https://desktop.example.com/bundle.js",
+            "protocol": "h2",
+            "resourceType": "Script",
+            "mimeType": "application/javascript",
+            "statusCode": 200,
+            "transferSize": 120000,
+            "resourceSize": 350000,
+            "priority": "High",
+            "networkRequestTime": 50,
+            "networkEndTime": 180
+          },
+          {
+            "url": "https://desktop.example.com/site.css",
+            "protocol": "h2",
+            "resourceType": "Stylesheet",
+            "mimeType": "text/css",
+            "statusCode": 200,
+            "transferSize": 40000,
+            "resourceSize": 110000,
+            "priority": "VeryHigh",
+            "networkRequestTime": 48,
+            "networkEndTime": 95
+          }
+        ]
+      }
+    }
+  }
+}
