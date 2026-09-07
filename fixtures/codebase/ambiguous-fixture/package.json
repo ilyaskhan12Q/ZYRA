@@ -1,0 +1,8 @@
+{
+  "name": "synthetic-ambiguous",
+  "version": "1.0.0",
+  "dependencies": {
+    "next": "14.0.0",
+    "nuxt": "3.0.0"
+  }
+}
