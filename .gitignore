@@ -93,18 +93,43 @@ Desktop.ini
 .parcel-cache/
 
 # ------------------------------------------------------------
-# 10. Generated Reports & Local State
+# 10. Generated Reports, CI Artifacts & Local State
 # ------------------------------------------------------------
 reports/
 *-report.json
 verification-report.json
 fix-plan.json
 fix-result.json
-.system_generated/
-.antigravity/
+ci-baseline.json
+zyra-ci-result.json
+zyra-pr-comment.md
+*.baseline.json
+*.ci-result.json
+*.pr-comment.md
 
 # ------------------------------------------------------------
-# 11. Test Fixtures Exception
+# 11. AI Agent Metadata & Workspaces
+# ------------------------------------------------------------
+.system_generated/
+.antigravity/
+.gemini/
+.claude/
+.cursor/
+
+# ------------------------------------------------------------
+# 12. Temporary & Scratch Files
+# ------------------------------------------------------------
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.orig
+*.patch
+*.diff
+
+# ------------------------------------------------------------
+# 13. Test Fixtures Exception
 # Preserve all test fixture files (synthetic .env, mock keys, lockfiles)
 # ------------------------------------------------------------
 !fixtures/**
