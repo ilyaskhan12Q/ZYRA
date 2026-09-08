@@ -4,6 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { loadContext, validateContext } from '../context/loader.js';
 import { collectEvidence } from '../evidence/collector.js';
+import { normalizeEvidence } from '../evidence/normalizer.js';
 import { type DeviceType } from '../lighthouse/types.js';
 import { LighthouseError, InvalidUrlError } from '../lighthouse/errors.js';
 import { RuleEngine } from '../rules/engine.js';
@@ -29,8 +30,19 @@ import {
   type VerificationResult,
   type MetricDelta
 } from '../verification/index.js';
+import {
+  runCI,
+  createCIBaseline,
+  saveCIBaseline,
+  loadCIBaseline,
+  parseBudgetConfig,
+  formatCIReportTerminal,
+  CI_EXIT_CODES,
+  type CIPolicy,
+  type CIResult
+} from '../ci/index.js';
 
-const VERSION = '0.6.0';
+const VERSION = '0.9.3';
 
 function printHelp(): void {
   console.log(`
@@ -48,6 +60,9 @@ USAGE:
   zyra fix catalog [options]
   zyra verify <url> --workspace <path> --baseline <file> [options]
   zyra fix verify <fix-result> --url <url> --workspace <path> [options]
+  zyra ci <url> [options]
+  zyra ci check <url> [options]
+  zyra ci baseline <url> [options]
 
 COMMANDS:
   <url>             Run empirical performance investigation and rule analysis against target URL
@@ -59,12 +74,24 @@ COMMANDS:
   fix catalog       Display structured catalog of registered fix strategies
   fix verify <res>  Verify performance after applying a fix result
   verify <url>      Empirically verify performance improvement between baseline and post-fix runs
+  ci <url>          Run CI performance check, budget enforcement, and regression detection
+  ci baseline <url> Capture and persist an authoritative performance baseline
   rules             Display structured catalog of all registered performance rules
   rules --json      Output rule catalog as JSON
   context           Display structured summary of persistent project context
   context --json    Output complete persistent context as JSON
   --help, -h        Display this help message
   --version, -v     Display ZYRA version
+
+CI OPTIONS:
+  --baseline <file>           Baseline measurement JSON (CIBaseline or ZyraEvidence)
+  --budget <file|json>        Performance budget configuration file or inline JSON
+  --config <file>             CI configuration file (budgets and policy)
+  --output <file>             Write machine-readable CIResult JSON to specified file
+  --markdown-output <file>    Write PR Markdown summary comment to specified file
+  --current <file>            Pre-captured evidence file for offline CI evaluation
+  --fail-on-warn              Elevate WARN exit code (2) to FAIL exit code (1)
+  --allow-missing-baseline    Do not fail if baseline is missing; evaluate budgets only
 
 MEASUREMENT OPTIONS:
   --workspace <path> Target codebase workspace path to correlate with browser telemetry
@@ -1170,6 +1197,302 @@ ZYRA Fix Commands:
   process.exit(1);
 }
 
+function printCiHelp(): void {
+  console.log(`
+ZYRA CI / Regression Detection Commands:
+  zyra ci <url> [options]               Run CI performance check and budget regression evaluation
+  zyra ci check <url> [options]         Alias for 'zyra ci'
+  zyra ci baseline <url> [options]      Capture and save an authoritative performance baseline
+
+OPTIONS:
+  --baseline <file>           Baseline measurement JSON (CIBaseline or ZyraEvidence)
+  --budget <file|json>        Performance budget configuration file or inline JSON
+  --config <file>             CI configuration file (budgets and policy)
+  --output <file>             Write machine-readable CIResult JSON to specified file
+  --markdown-output <file>    Write PR Markdown summary comment to specified file
+  --current <file>            Pre-captured evidence file for offline CI evaluation
+  --mobile                    Emulate mobile device profile (default)
+  --desktop                   Emulate desktop device profile
+  --fail-on-warn              Elevate WARN exit code (2) to FAIL exit code (1)
+  --allow-missing-baseline    Do not fail if baseline is missing; evaluate budgets only
+  --timeout <ms>              Browser measurement timeout in milliseconds (default: 60000)
+  --json                      Output machine-readable CIResult JSON
+
+EXIT CODES:
+  0 = PASS                    All budgets met, zero significant regressions
+  1 = FAIL                    Significant regression or hard budget violation
+  2 = WARN                    Warning-level budget or minor regression crossed
+  3 = INCONCLUSIVE            Incompatible baseline or missing baseline when required
+  4 = MEASUREMENT_FAILED      Browser or network measurement error
+`);
+}
+
+async function handleCiBaselineCommand(args: string[]): Promise<void> {
+  const isJson = args.includes('--json');
+  const device: DeviceType = args.includes('--desktop') ? 'desktop' : 'mobile';
+
+  const outIdx = args.indexOf('--output');
+  const outputPath = outIdx !== -1 && args[outIdx + 1] ? args[outIdx + 1] : 'zyra-baseline.json';
+
+  const currentIdx = args.indexOf('--current');
+  const currentPath = currentIdx !== -1 && args[currentIdx + 1] ? args[currentIdx + 1] : undefined;
+
+  const timeoutIdx = args.indexOf('--timeout');
+  const timeoutMs = timeoutIdx !== -1 && args[timeoutIdx + 1] ? parseInt(args[timeoutIdx + 1], 10) : 60000;
+
+  // Find URL
+  let targetUrl = args.find((a, idx) => {
+    if (a.startsWith('--')) return false;
+    if (idx > 0 && ['--output', '--current', '--timeout'].includes(args[idx - 1])) return false;
+    return true;
+  });
+
+  let evidence: any;
+
+  if (currentPath) {
+    try {
+      const content = await fs.readFile(currentPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      const rawData = parsed.evidence ? parsed.evidence : parsed;
+      if (!rawData.schemaVersion && rawData.audits && (rawData.lighthouseVersion || rawData.categories)) {
+        const finalUrl = targetUrl || rawData.finalDisplayedUrl || rawData.requestedUrl || 'https://example.com/';
+        evidence = normalizeEvidence({
+          metadata: {
+            targetUrl: finalUrl,
+            requestedUrl: rawData.requestedUrl || finalUrl,
+            finalDisplayedUrl: finalUrl,
+            device,
+            timestamp: rawData.fetchTime || new Date().toISOString(),
+            durationMs: rawData.timing?.total || 1000,
+            lighthouseVersion: rawData.lighthouseVersion || '13.4.1'
+          },
+          rawLhr: rawData
+        });
+      } else {
+        evidence = rawData;
+      }
+      if (!targetUrl && evidence.target?.url) {
+        targetUrl = evidence.target.url;
+      }
+    } catch (err) {
+      console.error(`❌ Failed to read current evidence file '${currentPath}': ${(err as Error).message}`);
+      process.exit(1);
+    }
+  } else {
+    if (!targetUrl) {
+      console.error('❌ Please specify a URL to capture baseline: zyra ci baseline <url> [options]');
+      process.exit(1);
+    }
+    try {
+      const res = await collectEvidence({ url: targetUrl, device, timeoutMs });
+      evidence = res.evidence;
+    } catch (err) {
+      console.error(`❌ Measurement failed: ${(err as Error).message}`);
+      process.exit(CI_EXIT_CODES.MEASUREMENT_FAILED);
+    }
+  }
+
+  if (!targetUrl) {
+    console.error('❌ Target URL is required to create a baseline.');
+    process.exit(1);
+  }
+
+  try {
+    const baseline = createCIBaseline(evidence, {
+      capturedVia: 'zyra ci baseline'
+    });
+    await saveCIBaseline(baseline, outputPath);
+
+    if (isJson) {
+      console.log(JSON.stringify(baseline, null, 2));
+      return;
+    }
+
+    console.log(`
+============================================================
+ ZYRA CI — Baseline Captured
+============================================================
+ Target:            ${baseline.url}
+ Profile:           ${baseline.device}
+ Baseline ID:       ${baseline.id}
+ Saved To:          ${outputPath}
+ Timestamp:         ${baseline.timestamp}
+
+ METRICS
+ ------------------------------------------------------------
+  LCP:              ${baseline.metrics.lcp !== null ? `${Math.round(baseline.metrics.lcp)}ms` : 'N/A'}
+  FCP:              ${baseline.metrics.fcp !== null ? `${Math.round(baseline.metrics.fcp)}ms` : 'N/A'}
+  CLS:              ${baseline.metrics.cls !== null ? baseline.metrics.cls.toFixed(2) : 'N/A'}
+  TBT:              ${baseline.metrics.tbt !== null ? `${Math.round(baseline.metrics.tbt)}ms` : 'N/A'}
+  Speed Index:      ${baseline.metrics.speedIndex !== null ? `${Math.round(baseline.metrics.speedIndex)}ms` : 'N/A'}
+  INP:              ${baseline.metrics.inp !== null ? `${Math.round(baseline.metrics.inp)}ms` : 'N/A'}
+============================================================
+`);
+  } catch (err) {
+    console.error(`❌ Failed to create baseline: ${(err as Error).message}`);
+    process.exit(1);
+  }
+}
+
+async function handleCiCommand(args: string[]): Promise<void> {
+  const first = args[0];
+  if (first === 'baseline') {
+    await handleCiBaselineCommand(args.slice(1));
+    return;
+  }
+  if (!first || first === '--help' || first === '-h' || first === 'help') {
+    printCiHelp();
+    return;
+  }
+
+  const effectiveArgs = first === 'check' ? args.slice(1) : args;
+
+  const isJson = effectiveArgs.includes('--json');
+  const device: DeviceType = effectiveArgs.includes('--desktop') ? 'desktop' : 'mobile';
+  const failOnWarn = effectiveArgs.includes('--fail-on-warn');
+  const allowMissingBaseline = effectiveArgs.includes('--allow-missing-baseline');
+
+  const baseIdx = effectiveArgs.indexOf('--baseline');
+  const baselinePath = baseIdx !== -1 && effectiveArgs[baseIdx + 1] ? effectiveArgs[baseIdx + 1] : undefined;
+
+  const budgetIdx = effectiveArgs.indexOf('--budget');
+  const budgetArg = budgetIdx !== -1 && effectiveArgs[budgetIdx + 1] ? effectiveArgs[budgetIdx + 1] : undefined;
+
+  const configIdx = effectiveArgs.indexOf('--config');
+  const configArg = configIdx !== -1 && effectiveArgs[configIdx + 1] ? effectiveArgs[configIdx + 1] : undefined;
+
+  const outIdx = effectiveArgs.indexOf('--output');
+  const outputPath = outIdx !== -1 && effectiveArgs[outIdx + 1] ? effectiveArgs[outIdx + 1] : undefined;
+
+  const mdOutIdx = effectiveArgs.indexOf('--markdown-output');
+  const markdownOutputPath = mdOutIdx !== -1 && effectiveArgs[mdOutIdx + 1] ? effectiveArgs[mdOutIdx + 1] : undefined;
+
+  const currentIdx = effectiveArgs.indexOf('--current');
+  const currentPath = currentIdx !== -1 && effectiveArgs[currentIdx + 1] ? effectiveArgs[currentIdx + 1] : undefined;
+
+  const timeoutIdx = effectiveArgs.indexOf('--timeout');
+  const timeoutMs = timeoutIdx !== -1 && effectiveArgs[timeoutIdx + 1] ? parseInt(effectiveArgs[timeoutIdx + 1], 10) : 60000;
+
+  // Find target URL: either from --url flag or first non-flag argument
+  const urlFlagIdx = effectiveArgs.indexOf('--url');
+  let targetUrl: string | undefined = urlFlagIdx !== -1 && effectiveArgs[urlFlagIdx + 1] ? effectiveArgs[urlFlagIdx + 1] : undefined;
+
+  if (!targetUrl) {
+    targetUrl = effectiveArgs.find((a, idx) => {
+      if (a.startsWith('--')) return false;
+      if (idx > 0 && ['--baseline', '--budget', '--config', '--output', '--markdown-output', '--current', '--timeout', '--url'].includes(effectiveArgs[idx - 1])) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  // Load current evidence if in offline mode
+  let currentEvidence: any | undefined;
+  if (currentPath) {
+    try {
+      const content = await fs.readFile(currentPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      const rawData = parsed.evidence ? parsed.evidence : parsed;
+      if (!rawData.schemaVersion && rawData.audits && (rawData.lighthouseVersion || rawData.categories)) {
+        const finalUrl = targetUrl || rawData.finalDisplayedUrl || rawData.requestedUrl || 'https://example.com/';
+        currentEvidence = normalizeEvidence({
+          metadata: {
+            targetUrl: finalUrl,
+            requestedUrl: rawData.requestedUrl || finalUrl,
+            finalDisplayedUrl: finalUrl,
+            device,
+            timestamp: rawData.fetchTime || new Date().toISOString(),
+            durationMs: rawData.timing?.total || 1000,
+            lighthouseVersion: rawData.lighthouseVersion || '13.4.1'
+          },
+          rawLhr: rawData
+        });
+      } else {
+        currentEvidence = rawData;
+      }
+      if (!targetUrl && currentEvidence?.target?.url) {
+        targetUrl = currentEvidence.target.url;
+      }
+    } catch (err) {
+      console.error(`❌ Failed to read current evidence file '${currentPath}': ${(err as Error).message}`);
+      process.exit(CI_EXIT_CODES.MEASUREMENT_FAILED);
+    }
+  }
+
+  // If targetUrl not yet resolved, try reading from baseline
+  let baselineObj: any;
+  if (baselinePath) {
+    try {
+      baselineObj = await loadCIBaseline(baselinePath);
+      if (!targetUrl && baselineObj.url) {
+        targetUrl = baselineObj.url;
+      }
+    } catch {
+      // Handled by runCI
+    }
+  }
+
+  if (!targetUrl) {
+    console.error('❌ Please specify a target URL: zyra ci <url> [options]');
+    process.exit(1);
+  }
+
+  // Load budget config if provided
+  let budgetConfig;
+  if (budgetArg) {
+    try {
+      budgetConfig = await parseBudgetConfig(budgetArg);
+    } catch (err) {
+      console.error(`❌ Failed to load budget configuration: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  } else if (configArg) {
+    try {
+      budgetConfig = await parseBudgetConfig(configArg);
+    } catch (err) {
+      console.error(`❌ Failed to load configuration file: ${(err as Error).message}`);
+      process.exit(1);
+    }
+  }
+
+  const policy: CIPolicy = {
+    failOnWarn,
+    allowMissingBaseline
+  };
+
+  try {
+    const result = await runCI({
+      targetUrl,
+      device,
+      baseline: baselineObj || baselinePath,
+      currentEvidence,
+      budgetConfig,
+      policy,
+      timeoutMs
+    });
+
+    if (outputPath) {
+      await fs.writeFile(outputPath, JSON.stringify(result, null, 2), 'utf-8');
+    }
+
+    if (markdownOutputPath && result.prComment) {
+      await fs.writeFile(markdownOutputPath, result.prComment, 'utf-8');
+    }
+
+    if (isJson) {
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      console.log(formatCIReportTerminal(result));
+    }
+
+    process.exit(result.exitCode);
+  } catch (err) {
+    console.error(`❌ Fatal CI Error: ${(err as Error).message}`);
+    process.exit(CI_EXIT_CODES.MEASUREMENT_FAILED);
+  }
+}
+
 export async function runCli(args: string[]): Promise<void> {
   const firstArg = args[0];
 
@@ -1209,6 +1532,11 @@ export async function runCli(args: string[]): Promise<void> {
 
   if (firstArg === 'verify' || firstArg === '/verify') {
     await handleVerifyCommand(args.slice(1));
+    return;
+  }
+
+  if (firstArg === 'ci' || firstArg === '/ci') {
+    await handleCiCommand(args.slice(1));
     return;
   }
 

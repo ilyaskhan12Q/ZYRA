@@ -128,12 +128,13 @@ This document outlines the sequential phases of development for ZYRA. In accorda
 ---
 
 ## Phase 09 — CI / Regression Detection
-* **Status:** Planned
+* **Status:** Complete
 * **Objective:** Enable ZYRA to run in continuous integration pipelines for automated performance regression gating.
 * **Major Components:**
-  - Headless CI execution mode.
-  - Performance budgeting rules.
-  - Pull request comment formatting.
+  - Headless CI execution mode with deterministic baseline comparison (`zyra ci`, `zyra ci check`, `zyra ci baseline`).
+  - Configurable performance budgeting rules with Google Web Vitals defaults.
+  - Controlled CI exit codes (0, 1, 2, 3, 4) and deterministic policy resolution.
+  - Pull request comment formatting and GitHub Actions workflow (`.github/workflows/zyra-ci.yml`).
 * **Dependencies:** Phase 08.
 * **Exit Criteria:** Deterministic exit codes and markdown summary suitable for GitHub Actions / CI.
 

@@ -32,9 +32,12 @@
                             │
                             ▼
                     Fix & Build (Phase 07)
-                            │
-                            ▼
-                   Verification (Phase 08)
+                             │
+                             ▼
+                    Verification (Phase 08)
+                             │
+                             ▼
+                    CI / Regression Gate (Phase 09)
 ```
 
 ---
@@ -108,6 +111,15 @@
 - **`verifier.ts`:** `VerificationEngine` synthesizing target-finding verification, global regression detection, and deterministic optimization decisions (`KEEP_FIX`, `ROLLBACK_RECOMMENDED`, `NO_ACTION`, `RETRY_NOT_RECOMMENDED`, `INCONCLUSIVE`), supporting bounded repeat runs ($1 \le n \le 5$).
 - **Strict Boundary:** Verification is read-only; never mutates target files or applies autonomous fixes. `APPLIED != IMPROVED`.
 
+### 9. CI / Regression Detection Subsystem (`src/ci/` — Implemented)
+- **`baseline.ts`:** Creates, serializes, loads, and verifies provenance and compatibility of authoritative baselines.
+- **`budgets.ts`:** Evaluates configurable Core Web Vitals performance budgets with official Good criteria defaults.
+- **`regression.ts`:** Detects significant regressions and classifies severity (`CRITICAL` for CWV, `WARNING` for secondary).
+- **`policy.ts`:** Pure deterministic policy resolution mapping results to controlled exit statuses (`PASS`, `WARN`, `FAIL`, `INCONCLUSIVE`, `MEASUREMENT_FAILED`) and stable exit codes (0–4).
+- **`reporter.ts`:** Formats aligned terminal output and GitHub-flavored PR markdown comments.
+- **`runner.ts`:** High-level orchestration pipeline supporting live measurements or offline pre-captured telemetry.
+- **Strict Boundary:** Read-only CI performance gating; never applies code mutations or autonomous rollbacks.
+
 ---
 
 ## 3. Strict Architectural Separation
@@ -122,4 +134,5 @@
 | **Correlation / Diagnosis** | `src/correlation/` | Findings + Code Evidence | `CorrelationResult` (v1.0) | Multi-signal traceability; bounded confidence. |
 | **Fix** | `src/fixes/` | Candidate Contributor | Modified Code + Status | Safe, minimal, reversible. |
 | **Verification** | `src/verification/` | Baseline + Post-Fix Runs | `VerificationResult` (v1.0) | Empirical proof required (`APPLIED != IMPROVED`). |
+| **CI / Regression Detection** | `src/ci/` | Target URL, Baseline, Budgets | `CIResult` (v1.0), Exit Code | Deterministic gating; stable exit codes (0-4); baseline compatibility required. |
 

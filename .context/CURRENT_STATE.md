@@ -1,75 +1,84 @@
 # Current State
 
-**Last Updated:** 2026-09-06  
-**Current Phase:** Phase 08 — Post-Fix Verification & Optimization Loop  
-**Current Task:** Phase 08 Completed — Post-Fix Verification & Optimization Loop Implemented & Verified  
-**Status:** Complete / Operational (Verification Subsystem v1.0)  
+**Last Updated:** 2026-09-08  
+**Current Phase:** Phase 09 — CI / Regression Detection  
+**Current Task:** Phase 09 Completed — CI / Regression Detection Subsystem Implemented & Verified  
+**Status:** Complete / Operational (CI Subsystem v1.0)  
 
 ---
 
 ## Completed
-- **Verification Contracts & Schemas (`src/verification/types.ts`):**
-  - Formalized Schema Version 1.0 contracts: `VerificationResult`, `MeasurementSnapshot`, `ComparisonResult`, `MetricDelta`, `TargetVerification`, `VerificationProvenance`, and `RepeatedRunSummary`.
-  - Defined controlled statuses (`VERIFIED_IMPROVEMENT`, `VERIFIED_NO_IMPROVEMENT`, `REGRESSION_DETECTED`, `INCONCLUSIVE`, `MEASUREMENT_FAILED`).
-  - Defined deterministic optimization decisions (`KEEP_FIX`, `ROLLBACK_RECOMMENDED`, `NO_ACTION`, `RETRY_NOT_RECOMMENDED`, `INCONCLUSIVE`).
-  - Codified authoritative invariant: `APPLIED != IMPROVED`.
-- **Significance Policy & Noise Filtering (`src/verification/significance.ts`):**
-  - Codified conservative significance rules (`METRIC_SIGNIFICANCE_RULES`) distinguishing true optimizations from lab measurement jitter:
-    - LCP: min 100ms & 3%
-    - CLS: min 0.015 & 5%
-    - INP: min 25ms & 5%
-    - FCP: min 50ms & 3%
-    - TBT: min 30ms & 5%
-    - Speed Index: min 100ms & 3%
-  - Explicit handling for missing or unmeasured metrics (`NOT_AVAILABLE`).
-- **Measurement Compatibility & Snapshot Evaluator (`src/verification/compatibility.ts`):**
-  - Enforces URL normalization (origin + pathname) and strict device profile matching (`mobile` vs `desktop`).
-  - Rejects cross-profile comparisons and schema version discrepancies.
-- **Deterministic Metric Comparator (`src/verification/comparator.ts`):**
-  - Pure calculation of absolute deltas and percentage changes.
-  - Categorizes deltas into improvements, regressions, and unchanged metrics.
-  - Sorts metrics deterministically (Core Web Vitals first).
-- **Cryptographic Code State Validation (`src/verification/code-state.ts`):**
-  - Verifies workspace files match expected SHA-256 hashes from `FixResult.audit.newHashes`.
-  - Prevents associating measurements with drifted or modified workspaces.
-- **Verification Engine (`src/verification/verifier.ts`):**
-  - Evaluates target finding improvement (e.g. did LCP improve for an image optimization fix?).
-  - Concurrently conducts comprehensive regression checks across all other metrics.
-  - Recommends `ROLLBACK_RECOMMENDED` on any detected regression.
-  - Supports bounded repeated measurements ($1 \le n \le 5$) with `CONSISTENT_IMPROVEMENT`, `CONSISTENT_REGRESSION`, and `MIXED_RESULTS` detection.
+- **CI Contracts & Schema v1.0 (`src/ci/types.ts`):**
+  - Formalized Schema Version 1.0 contracts: `CIResult`, `CIBaseline`, `CIPolicy`, `CIMetricBudget`, `CIBudgetConfig`, `CIBudgetEvaluation`, `CIRegression`, `CIExitStatus`, `CI_EXIT_CODES`.
+  - Codified standard pipeline exit code mappings: `0 = PASS`, `1 = FAIL`, `2 = WARN`, `3 = INCONCLUSIVE`, `4 = MEASUREMENT_FAILED`.
+  - Defined regression severity classifications: `CRITICAL` vs `WARNING`.
+- **Deterministic Schema Validation (`src/ci/validator.ts`):**
+  - Robust runtime type-checking and structural verification for `CIResult`, `CIBaseline`, `CIPolicy`, `CIBudgetConfig`.
+  - Defined explicit `CIValidationError` with descriptive violation paths.
+- **Baseline Creation, Storage & Compatibility (`src/ci/baseline.ts`):**
+  - Creation of immutable `CIBaseline` snapshots containing raw evidence, findings, and metadata.
+  - Safe persistence via atomic atomic file writes (`saveCIBaseline`).
+  - Polymorphic loading supporting `CIBaseline`, `ZyraEvidence`, and raw Lighthouse LHR JSON (`loadCIBaseline`).
+  - Strict compatibility validation enforcing URL origin/pathname alignment and identical device profiles (`mobile` vs `desktop`).
+- **Performance Budget Engine (`src/ci/budgets.ts`):**
+  - Metric budget evaluation with configurable `warnThreshold` and `failThreshold`.
+  - Built-in defaults aligned with official Google Web Vitals "Good" criteria (LCP 2500ms, CLS 0.10, INP 200ms, FCP 1800ms, TBT 200ms).
+  - Configurable budget configs supporting multiple metric rules with zero LLM guesswork.
+- **Noise-Filtered Regression Detection (`src/ci/regression.ts`):**
+  - Reuses Phase 08 empirical significance boundaries to prevent lab jitter false alarms.
+  - Categorizes degraded metrics into `CRITICAL` (>2x significance threshold) and `WARNING` regressions.
+  - Formats human-readable explanations including absolute delta and percentage degradation.
+- **Deterministic Policy Engine (`src/ci/policy.ts`):**
+  - Evaluates regressions, budget breaches, measurement errors, and baseline validity.
+  - Deterministically computes `CIExitStatus` and exit code.
+  - Evaluates `--fail-on-warn` and `--allow-missing-baseline` policy flags.
+- **Dual Reporting Engine (`src/ci/reporter.ts`):**
+  - Terminal formatted report with ASCII tables, color-coded badges, and clear exit codes (`formatCIReportTerminal`).
+  - Rich GitHub PR comment markdown generation (`formatCIPRComment`) with status tables, budget evaluations, and next-action guidance.
+- **High-Level CI Runner (`src/ci/runner.ts`):**
+  - Complete orchestration pipeline (`runCI`) integrating baseline loading, live measurement or current snapshot analysis, budget evaluation, regression detection, policy enforcement, and reporting.
+  - Safe error trapping mapping runtime exceptions to standard exit statuses.
 - **CLI Commands (`src/cli/index.ts`):**
-  - Added `zyra verify <url> --workspace <path> --baseline <file> [options]`.
-  - Added `zyra fix verify <fix-result-file> --url <url> --workspace <path> [options]`.
-  - Formatted human terminal comparison table and machine-readable `--json` Schema v1.0 output.
-- **Documentation & Architecture Decisions:**
-  - Authoritative subsystem guide: `docs/VERIFICATION-ENGINE.md`.
-  - Documented ADR-024 through ADR-027 in `.context/DECISIONS.md`.
-  - Formalized Section 7 in `.context/CONTRACTS.md`.
-- **Automated Test Suite (269 passing tests across 77 suites):**
-  - `tests/verification/contracts.test.ts`: Schema v1.0 validation and invariant rejection (9 tests).
-  - `tests/verification/compatibility.test.ts`: Profile matching, URL normalization, schema checks (7 tests).
-  - `tests/verification/significance.test.ts`: Noise filtering, significance boundaries, zero baseline, missing data (7 tests).
-  - `tests/verification/comparator.test.ts`: Pure comparison, improvement, regression, purity (5 tests).
-  - `tests/verification/code-state.test.ts`: Hash checks against FixResult audit, drift detection (3 tests).
-  - `tests/verification/verifier.test.ts`: Lifecycle fixtures Cases A through E (5 tests).
-  - `tests/verification/repeated.test.ts`: Bounded repeated runs, mixed results, cap to 5 (3 tests).
-  - `tests/verification/cli.test.ts`: CLI verify, fix verify, --json, --output, error handling (5 tests).
-  - Preserved all 225 Phase 01–07 tests without regression.
+  - `zyra ci <url>`: Full CI check pipeline with `--baseline`, `--budget`, `--config`, `--output`, `--markdown-output`, `--fail-on-warn`, `--allow-missing-baseline`.
+  - `zyra ci check <url>`: Alias for `zyra ci`.
+  - `zyra ci baseline <url>`: Authoritative baseline capture with `--output`, `--mobile`, `--desktop`.
+  - Process exit code routing matching CI specification (0, 1, 2, 3, 4).
+- **GitHub Actions Workflow (`.github/workflows/zyra-ci.yml`):**
+  - Reusable CI workflow running lint, typecheck, build, test, and baseline regression check.
+  - Automatic `$GITHUB_STEP_SUMMARY` posting and artifact uploading.
+- **Authoritative Documentation & Architecture:**
+  - Full subsystem guide: `docs/CI-REGRESSION-ENGINE.md`.
+  - Architecture decisions recorded in `.context/DECISIONS.md`: ADR-028 (CI Schema v1.0 & Exit Code Contracts), ADR-029 (Baseline Architecture & Compatibility Invariant), ADR-030 (Performance Budgeting Engine & Web Vitals Defaults).
+  - Formalized Section 8 in `.context/CONTRACTS.md`.
+  - Skill and CLI documentation in `SKILL.md` and `README.md`.
+- **Automated Test Suite (320 passing tests across 87 suites):**
+  - 51 dedicated Phase 09 CI tests across 10 suites in `tests/ci/`:
+    - `contracts.test.ts`: Schema v1.0 validation and invariant rejection (7 tests).
+    - `baseline.test.ts`: Baseline creation, saving, polymorphic loading, and compatibility checks (6 tests).
+    - `budgets.test.ts`: Default Web Vitals budgets, custom budgets, warn/fail evaluation (5 tests).
+    - `regression.test.ts`: Noise filtering, critical vs warning regression classification (4 tests).
+    - `policy.test.ts`: Pure policy mapping, exit codes, fail-on-warn, allow-missing-baseline (5 tests).
+    - `reporter.test.ts`: Terminal formatting and PR comment markdown output (5 tests).
+    - `runner.test.ts`: End-to-end runner orchestration, mock and live paths (5 tests).
+    - `cli.test.ts`: CLI argument parsing, flags, file generation, process exit codes (5 tests).
+    - `security.test.ts`: Read-only execution, path traversal guards, corrupt JSON handling (4 tests).
+    - `determinism.test.ts`: Purity, reproducibility, zero external network dependencies (5 tests).
+  - Preserved all 269 Phase 01–08 tests without regression.
 
 ## In Progress
-- None. Phase 08 is complete.
+- None. Phase 09 is complete.
 
 ## Next
-- **Phase 09 — CI / Regression Detection:** Automated performance gating in CI pipelines, pull request comment formatting, and budget enforcement.
+- **Phase 10 — Advanced CDP & Trace Profiling:** Chrome DevTools Protocol tracing, CPU flame graphs, main-thread long task breakdown, and memory leak analysis.
 
 ## Blocked
 - None.
 
 ## Known Limitations
-- Lab measurements run in controlled local environments (Lighthouse); field Core Web Vitals (RUM/CrUX) depend on real-user traffic and remain separate from lab verification.
-- Phase 08 recommends rollback when regressions occur; automated rollback execution is triggered explicitly by the operator using Phase 07 rollback mechanisms.
+- Lab measurements run in controlled local environments (Lighthouse); field Core Web Vitals (RUM/CrUX) require real-user monitoring.
+- Phase 09 provides non-destructive gating and PR reporting; automated fix rollbacks in CI must be invoked explicitly via Phase 07 rollback mechanisms.
 
 ## Last Verification
 - `npm run typecheck`: Passed (0 errors)
 - `npm run build`: Passed (Clean build in `dist/`)
-- `npm test`: Passed (269 tests passing, 0 failing, 77 suites)
+- `npm test`: Passed (320 tests passing, 0 failing, 87 suites)

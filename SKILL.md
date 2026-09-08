@@ -6,9 +6,9 @@ description: Agent-native web performance investigation and optimization tool. M
 # ZYRA — Agent Skill Guide
 
 **Skill Version:** 1.0  
-**Target System:** ZYRA v0.6.0  
+**Target System:** ZYRA v0.9.3  
 **Interface:** `/zyra`  
-**Execution Model:** Local-First, Deterministic, Read-Only (Phase 06)
+**Execution Model:** Local-First, Deterministic, Read-Only (Phase 06/09) / Safe Modification (Phase 07)
 
 ---
 
@@ -55,6 +55,8 @@ ZYRA follows a rigorous 9-stage investigation cycle. As an AI coding agent, you 
     RE-MEASURE           [AVAILABLE THROUGH ZYRA]
        ↓
     VERIFY               [AVAILABLE THROUGH TELEMETRY COMPARISON — Phase 08]
+       ↓
+    CI GATING            [AVAILABLE THROUGH REGRESSION & BUDGET ENGINE — Phase 09]
 ```
 
 ### Operational Boundaries:
@@ -64,6 +66,7 @@ ZYRA follows a rigorous 9-stage investigation cycle. As an AI coding agent, you 
   * Every fix is evidence-backed, scoped, minimal, reversible, and guarded by SHA-256 optimistic concurrency checks.
 * **Stages 7–9 (Test, Re-measure, Verify — Phase 08):** Empirical performance verification is fully operational via `zyra verify` and `zyra fix verify`.
   * **Core Invariant:** `APPLIED != IMPROVED`. An applied code modification only documents that files were modified. It is NEVER interpreted as a performance improvement without post-fix measurement comparing against baseline evidence.
+* **Stage 10 (CI / Regression Gating — Phase 09):** Automated performance regression detection and Web Vitals budget evaluation are fully operational via `zyra ci` and `zyra ci baseline`, with deterministic pipeline exit codes (`0 = PASS`, `1 = FAIL`, `2 = WARN`, `3 = INCONCLUSIVE`, `4 = MEASUREMENT_FAILED`).
 
 ---
 
@@ -101,10 +104,15 @@ zyra fix apply <plan-file> --workspace <path> [--dry-run] [--json]
 zyra verify <url> --workspace <path> --baseline <file> [--post-fix <file>] [--runs <n>] [--json]
 zyra fix verify <fix-result> --url <url> --workspace <path> --baseline <file> [--json]
 
-# 9. Persistent Context System
+# 9. CI / Regression Gating & Budget Evaluation (Phase 09)
+zyra ci <url> --baseline <file> [--budget <file>] [--config <file>] [--output <file>] [--markdown-output <file>] [--fail-on-warn] [--allow-missing-baseline]
+zyra ci check <url> --baseline <file> [options]
+zyra ci baseline <url> [--output <file>] [--mobile | --desktop]
+
+# 10. Persistent Context System
 zyra context [--json]
 
-# 10. Help & Version
+# 11. Help & Version
 zyra --help
 zyra --version
 ```
@@ -113,10 +121,24 @@ zyra --version
 * `--mobile` *(Default)*: Emulates a mobile device profile (412x823 viewport, mobile 4G CPU and network throttling).
 * `--desktop`: Emulates a desktop device profile (1350x940 viewport, desktop network and CPU profile).
 * `--workspace <path>` (or `--codebase <path>`): Path to the target application workspace to correlate with browser telemetry.
+* `--baseline <file>`: Path to baseline measurement JSON, `CIBaseline` artifact, or raw Lighthouse LHR.
+* `--budget <file>`: Path to performance budget configuration JSON (`CIBudgetConfig`).
+* `--config <file>`: Path to CI policy configuration JSON (`CIPolicy`).
+* `--output <file>`: Path to save machine-readable JSON result (`CIResult` Schema v1.0).
+* `--markdown-output <file>`: Path to save formatted GitHub PR comment markdown report.
+* `--fail-on-warn`: Fail CI pipeline (exit code 1) on any warning condition.
+* `--allow-missing-baseline`: Treat missing baseline as a warning rather than inconclusive.
 * `--json`: Emits structured machine-readable JSON. **Agents should always prefer `--json` when programmatic parsing is required.**
 * `--timeout <ms>`: Sets browser execution timeout in milliseconds (default: `60000`).
 * `--dry-run`: Simulates fix application and preflight checks without modifying any files on disk.
 * `--allow-high-risk`: Explicit override allowing application of plans classified as HIGH risk.
+
+### CI Exit Code Contract
+* `0`: **PASS** — Performance within budgets, no regressions detected.
+* `1`: **FAIL** — Performance regression detected, budget hard ceiling violated, or `--fail-on-warn` triggered.
+* `2`: **WARN** — Budget warn threshold breached or non-critical regression detected.
+* `3`: **INCONCLUSIVE** — Baseline missing or incompatible (URL/profile mismatch), inputs corrupted.
+* `4`: **MEASUREMENT_FAILED** — Lighthouse or Chrome runner error during live test execution.
 
 ### Unsupported Future Commands (DO NOT INVOKE)
 The following commands are planned for future phases and are **NOT** available in Phase 06:
@@ -289,3 +311,7 @@ When presenting ZYRA investigation results to the user, follow this concise, evi
 | `InvalidUrlError` | Protocol not http:// or https:// | Ensure target URL begins with `http://` or `https://`. |
 | `Workspace not found` | Target path does not exist | Verify directory path before invoking `--workspace`. |
 | `INSUFFICIENT_EVIDENCE` | Bundle lacks source maps or asset from CDN | State clearly that local source attribution cannot be confirmed without source maps. |
+| `BaselineIncompatibleError` | Baseline and current run have URL or device mismatch | Ensure `--mobile` / `--desktop` matches baseline and target URL matches baseline origin/pathname. |
+| `BudgetViolation` | Metric exceeded configured CI budget threshold | Inspect PR report or run `zyra analyze` to identify root causes in workspace. |
+| `RegressionDetected` | Metric degraded beyond noise boundary | Review recent code changes, run `zyra verify` or rollback regression-introducing commits. |
+

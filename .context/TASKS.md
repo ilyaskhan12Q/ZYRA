@@ -224,4 +224,42 @@
 - [x] Author test suites covering contracts, compatibility, significance, comparator, code state, lifecycle fixtures, repeated runs, and CLI (44 new tests, 269 total passing tests across 77 suites)
 - [x] Mark Phase 08 complete
 
+---
+
+## PHASE 09 — CI / Regression Detection
+- [x] Define Schema Version 1.0 CI contracts (`CIRun`, `CIBaseline`, `CIPolicy`, `CIMetricBudget`, `CIRegression`, `CIResult`, `CIReport`, `CIExitStatus`)
+- [x] Define controlled exit statuses (`PASS`, `WARN`, `FAIL`, `INCONCLUSIVE`, `MEASUREMENT_FAILED`) and stable exit codes (0, 1, 2, 3, 4)
+- [x] Implement schema validator `validateCIResult()`, `validateCIBaseline()`, `validateCIPolicy()`, `validateCIBudgetConfig()` (`src/ci/validator.ts`)
+- [x] Implement deterministic baseline management (`src/ci/baseline.ts`):
+  - [x] Baseline creation and serialization with full provenance (`createCIBaseline`, `saveCIBaseline`)
+  - [x] Flexible baseline loading supporting `CIBaseline`, raw `ZyraEvidence`, and raw Lighthouse LHR (`loadCIBaseline`)
+  - [x] Strict compatibility validation rejecting URL origin/pathname mismatch, device profile mismatch, and schema mismatch
+- [x] Implement performance budgets engine (`src/ci/budgets.ts`):
+  - [x] Config parser supporting simple numbers, detailed objects with warning limits, inline JSON, and file paths
+  - [x] Official Web Vitals "Good" criteria default budgets (LCP 2500ms, FCP 1800ms, CLS 0.10, INP 200ms, TBT 200ms, SpeedIndex 3400ms)
+  - [x] Deterministic evaluation with delta and percentageOfBudget calculations
+- [x] Implement regression detection engine (`src/ci/regression.ts`):
+  - [x] Reuse Phase 08 noise filtering and significance boundaries
+  - [x] Severity classification (`CRITICAL` for Core Web Vitals and budget-violating metrics, `WARNING` for secondary metrics)
+- [x] Implement CI policy evaluation engine (`src/ci/policy.ts`):
+  - [x] Pure deterministic resolution of status and exit codes
+  - [x] Missing baseline handling (configurable via `allowMissingBaseline`)
+  - [x] Configurable `--fail-on-warn` escalation
+- [x] Implement report generator (`src/ci/reporter.ts`):
+  - [x] Clean, aligned terminal summary table
+  - [x] Markdown PR comment table with badges and details
+- [x] Implement end-to-end CI runner orchestration (`src/ci/runner.ts`)
+- [x] Integrate CI commands into CLI (`src/cli/index.ts`):
+  - [x] `zyra ci <url> [options]`
+  - [x] `zyra ci check <url> [options]`
+  - [x] `zyra ci baseline <url> [options]`
+  - [x] Support `--baseline`, `--budget`, `--config`, `--mobile`, `--desktop`, `--json`, `--output`, `--markdown-output`, `--current`, `--fail-on-warn`
+- [x] Implement production GitHub Actions workflow (`.github/workflows/zyra-ci.yml`)
+- [x] Document ADR-028, ADR-029, ADR-030 in `.context/DECISIONS.md`
+- [x] Update `CONTRACTS.md` with Section 8
+- [x] Create comprehensive subsystem documentation (`docs/CI-REGRESSION-ENGINE.md`)
+- [x] Author test suites covering contracts, baseline, budgets, regression, policy, reporter, runner, CLI, security, and determinism (51 new tests, 320 total passing tests across 87 suites)
+- [x] Bump package version to `0.9.0`
+- [x] Mark Phase 09 complete
+
 

@@ -1,0 +1,55 @@
+name: ZYRA CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  ci-check:
+    name: Build, Test & Performance Regression Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify TypeScript types
+        run: npm run typecheck
+
+      - name: Build ZYRA
+        run: npm run build
+
+      - name: Run automated test suite
+        run: npm test
+
+      - name: Verify CI offline check & report generation
+        run: |
+          node dist/src/cli/index.js ci https://example.com/ \
+            --current fixtures/lighthouse/synthetic-mobile.json \
+            --baseline fixtures/lighthouse/synthetic-mobile.json \
+            --output zyra-ci-result.json \
+            --markdown-output zyra-ci-summary.md
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            cat zyra-ci-summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload CI performance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zyra-ci-report
+          path: |
+            zyra-ci-result.json
+            zyra-ci-summary.md
+          retention-days: 14

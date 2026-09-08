@@ -223,4 +223,28 @@ This document tracks all significant architectural decisions made for ZYRA.
 * **Decision:** Support bounded repeat measurements (`--runs <n>`) with a hard upper bound ($1 \le n \le 5$). If repeated runs produce mixed results (e.g. one run improves and another regresses), the outcome is declared `MIXED_RESULTS` and status becomes `INCONCLUSIVE`. ZYRA never executes loops past the configured bound or applies recursive automatic fixes without developer intervention.
 * **Consequences:** Guarantees deterministic termination, prevents infinite loops, and surfaces environmental instability transparently.
 
+---
+
+## ADR-028: Deterministic CI Performance Budgets and Regression Detection Policy
+* **Status:** Accepted
+* **Context:** Running performance checks in CI pipelines requires objective, repeatable gating. Subjective assessments or unconfigured rules cause pipeline instability or flaky builds.
+* **Decision:** Decouple performance budgets from baseline regression comparison. Budgets enforce absolute bounds (defaulting to Google Core Web Vitals Good thresholds: LCP $\le$ 2500ms, CLS $\le$ 0.10, INP $\le$ 200ms), while regression detection evaluates relative deltas against an authoritative baseline filtered by Phase 08 noise boundaries.
+* **Consequences:** Changes that degrade performance are caught even if absolute budgets are met, and changes exceeding absolute budgets fail even if performance stayed flat relative to baseline.
+
+---
+
+## ADR-029: Stable Controlled CI Exit Codes and Status Model
+* **Status:** Accepted
+* **Context:** CI orchestrators (GitHub Actions, GitLab CI) require predictable process exit codes to pass or fail jobs, flag warnings, or retry failed runs.
+* **Decision:** Standardize controlled status strings (`PASS`, `FAIL`, `WARN`, `INCONCLUSIVE`, `MEASUREMENT_FAILED`) mapped to fixed numeric exit codes (`0`, `1`, `2`, `3`, `4`). Provide `--fail-on-warn` to optionally elevate warnings (`2`) to hard failures (`1`) for zero-tolerance release branches.
+* **Consequences:** CI pipelines can cleanly distinguish between genuine performance regressions (`1`), non-blocking warnings (`2`), configuration/target mismatches (`3`), and environment/browser launch errors (`4`).
+
+---
+
+## ADR-030: PR-Oriented Reporting and Baseline Provenance Invariants
+* **Status:** Accepted
+* **Context:** Developers and AI agents reviewing pull requests need concise, actionable feedback directly in comments or job summaries rather than parsing raw telemetry. Silently comparing different endpoints or device profiles produces false regression alarms.
+* **Decision:** Require strict compatibility validation (origin, pathname, and device profile matching). Generate deterministic, aligned terminal tables and GitHub-flavored Markdown reports with explicit badges (`REGRESSION`, `VIOLATION`, `IMPROVED`, `PASS`).
+* **Consequences:** Prevents false comparisons between desktop baselines and mobile PR runs. Delivers rich, scannable PR comments directly inside CI workflows.
+
 

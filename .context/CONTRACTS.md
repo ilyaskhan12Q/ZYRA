@@ -606,3 +606,130 @@ export interface VerificationResult {
 > [!IMPORTANT]
 > **Authoritative Invariant:** `APPLIED != IMPROVED`. A code modification recorded as `APPLIED` by Phase 07 only represents an unverified change. Only a `VerificationResult` with status `VERIFIED_IMPROVEMENT` based on empirical re-measurement confirms a performance optimization.
 
+---
+
+## 8. CI & Regression Detection Contracts (Schema Version 1.0 — Implemented)
+
+Represents automated performance gating, baseline comparison, and budget enforcement produced by the CI Subsystem (`src/ci/`).
+
+```typescript
+export const CI_SCHEMA_VERSION = '1.0' as const;
+
+export type CIExitStatus =
+  | 'PASS'
+  | 'WARN'
+  | 'FAIL'
+  | 'INCONCLUSIVE'
+  | 'MEASUREMENT_FAILED';
+
+export const CI_EXIT_CODES: Record<CIExitStatus, number> = {
+  PASS: 0,
+  FAIL: 1,
+  WARN: 2,
+  INCONCLUSIVE: 3,
+  MEASUREMENT_FAILED: 4
+} as const;
+
+export interface CIBudgetEvaluation {
+  metric: string;
+  name: string;
+  actual: number | null;
+  budgetMax: number;
+  budgetWarn?: number;
+  unit: 'ms' | 'score';
+  status: 'PASS' | 'WARN' | 'FAIL' | 'NOT_AVAILABLE';
+  delta: number | null;
+  percentageOfBudget: number | null;
+}
+
+export interface CIRegression {
+  metric: string;
+  name: string;
+  baseline: number | null;
+  current: number | null;
+  absoluteDelta: number | null;
+  percentageDelta: number | null;
+  direction: MetricDirection;
+  status: MetricStatus;
+  isSignificant: boolean;
+  unit: 'ms' | 'score';
+  severity: 'CRITICAL' | 'WARNING' | 'NONE';
+  budgetViolation?: boolean;
+  details: string;
+}
+
+export interface CIBaseline {
+  schemaVersion: '1.0';
+  id: string;
+  url: string;
+  normalizedUrl: string;
+  device: DeviceType;
+  timestamp: string;
+  zyraVersion: string;
+  metrics: {
+    fcp: number | null;
+    lcp: number | null;
+    cls: number | null;
+    tbt: number | null;
+    speedIndex: number | null;
+    inp: number | null;
+  };
+  scores: {
+    performance: number | null;
+  };
+  snapshot: MeasurementSnapshot;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CIPolicy {
+  failOnRegression?: boolean;
+  failOnBudgetViolation?: boolean;
+  warnOnBudgetViolation?: boolean;
+  warnOnMinorRegression?: boolean;
+  allowMissingBaseline?: boolean;
+  failOnWarn?: boolean;
+  strictMetrics?: string[];
+  maxAllowedRegressionPercent?: Record<string, number>;
+}
+
+export interface CIResult {
+  schemaVersion: '1.0';
+  id: string;
+  timestamp: string;
+  targetUrl: string;
+  device: DeviceType;
+  status: CIExitStatus;
+  exitCode: number;
+  policy: CIPolicy;
+  currentRun: {
+    url: string;
+    device: DeviceType;
+    metrics: Record<string, number | null>;
+    scores: Record<string, number | null>;
+    evidenceTimestamp: string;
+  };
+  baseline?: {
+    id: string;
+    url: string;
+    device: DeviceType;
+    timestamp: string;
+    metrics: Record<string, number | null>;
+    scores: Record<string, number | null>;
+    compatible: boolean;
+    incompatibilityReason?: string;
+  };
+  comparison?: CIComparisonSummary;
+  budgets: {
+    passed: boolean;
+    evaluations: CIBudgetEvaluation[];
+    violations: CIBudgetEvaluation[];
+    warnings: CIBudgetEvaluation[];
+  };
+  summary: string;
+  prComment?: string;
+}
+```
+
+> [!IMPORTANT]
+> **CI Compatibility & Gating Invariant:** A baseline is never compared silently across mismatched URLs or device profiles. Incompatibilities deterministically yield `INCONCLUSIVE` (exit code `3`). Any Core Web Vital regression or hard performance budget violation yields `FAIL` (exit code `1`).
+

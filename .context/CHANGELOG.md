@@ -4,6 +4,58 @@ All notable changes to the ZYRA project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.9.3] - 2026-09-08
+
+### Added
+- Open-source contributor guide ([`CONTRIBUTING.md`](CONTRIBUTING.md)) with development setup and PR guidelines.
+- Contributor Covenant Code of Conduct ([`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)) version 2.1.
+- Documentation and architecture index in `README.md`.
+
+### Changed
+- Refactored `README.md` for production readiness, removing internal milestone tracking.
+- Bumped version to `0.9.3`.
+
+## [0.9.0] - 2026-09-08
+
+### Added
+- **CI / Regression Detection Subsystem (`src/ci/`):**
+  - Formalized Schema Version 1.0 contracts: `CIResult`, `CIBaseline`, `CIPolicy`, `CIMetricBudget`, `CIBudgetConfig`, `CIBudgetEvaluation`, `CIRegression`, and `CIExitStatus` (`src/ci/types.ts`).
+  - Defined controlled exit statuses (`PASS`, `WARN`, `FAIL`, `INCONCLUSIVE`, `MEASUREMENT_FAILED`) mapped to stable exit codes (`0`, `1`, `2`, `3`, `4`).
+  - Implemented schema validator `validateCIResult()`, `validateCIBaseline()`, `validateCIPolicy()`, `validateCIBudgetConfig()` (`src/ci/validator.ts`).
+  - Implemented baseline management engine (`src/ci/baseline.ts`):
+    - Authoritative baseline persistence (`createCIBaseline`, `saveCIBaseline`).
+    - Flexible baseline loading supporting `CIBaseline`, raw `ZyraEvidence`, and raw Lighthouse LHR JSON (`loadCIBaseline`).
+    - Strict compatibility validation enforcing URL origin/pathname and device profile consistency (`validateCIBaselineCompatibility`).
+  - Implemented configurable performance budgets engine (`src/ci/budgets.ts`):
+    - Official Google Web Vitals "Good" criteria defaults (LCP: 2500ms, FCP: 1800ms, CLS: 0.10, INP: 200ms, TBT: 200ms, SpeedIndex: 3400ms).
+    - Supports numeric thresholds and detailed objects with warning limits.
+    - Deterministic evaluation computing absolute and percentage budget deltas.
+  - Implemented regression detection engine (`src/ci/regression.ts`):
+    - Reuses Phase 08 noise boundaries and significance policy to eliminate lab jitter false alarms.
+    - Classifies regressions into `CRITICAL` (Core Web Vitals or budget-breaching metrics) and `WARNING` (secondary metrics).
+  - Implemented deterministic policy engine (`src/ci/policy.ts`):
+    - Maps measurement failures, incompatible baselines, budget violations, and regressions directly to exit codes.
+    - Supports `--fail-on-warn` escalation and `--allow-missing-baseline`.
+  - Implemented CI reporter (`src/ci/reporter.ts`):
+    - Aligned human-readable terminal summary table.
+    - GitHub-flavored PR Markdown comment table with status emojis and badge summaries.
+  - Implemented high-level CI runner (`src/ci/runner.ts`):
+    - Coordinates live headless browser measurements or offline pre-captured telemetry (`--current`).
+- **CLI Commands & Flags (`src/cli/index.ts`):**
+  - Added `zyra ci <url> [options]`, alias `zyra ci check <url> [options]`.
+  - Added `zyra ci baseline <url> [options]`.
+  - Added flags: `--baseline`, `--budget`, `--config`, `--output`, `--markdown-output`, `--current`, `--fail-on-warn`, `--allow-missing-baseline`.
+  - Exits with deterministic exit codes matching CI status (0, 1, 2, 3, 4).
+- **GitHub Actions Integration:**
+  - Added production-ready workflow `.github/workflows/zyra-ci.yml` running lint, build, test, and automated CI performance check with artifact upload and `$GITHUB_STEP_SUMMARY` reporting.
+- **Documentation & Architecture Decisions:**
+  - Added comprehensive subsystem guide `docs/CI-REGRESSION-ENGINE.md`.
+  - Added ADR-028 (*Deterministic CI Performance Budgets and Regression Detection Policy*), ADR-029 (*Stable Controlled CI Exit Codes and Status Model*), and ADR-030 (*PR-Oriented Reporting and Baseline Provenance Invariants*) in `.context/DECISIONS.md`.
+  - Added Section 8 in `.context/CONTRACTS.md`.
+- **Automated Test Suite (320 passing tests across 87 suites):**
+  - Added 51 new automated tests across contracts, baseline, budgets, regression, policy, reporter, runner, CLI, security, and determinism.
+  - Preserved 100% regression stability across all 269 Phase 01–08 tests.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added
