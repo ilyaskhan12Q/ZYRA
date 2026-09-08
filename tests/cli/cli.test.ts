@@ -22,7 +22,7 @@ describe('CLI — Command Execution', () => {
   it('displays version with --version', async () => {
     const { stdout, stderr } = await execFileAsync(process.execPath, [cliPath, '--version']);
     assert.equal(stderr, '');
-    assert.ok(stdout.includes('zyra v0.6.0'));
+    assert.ok(stdout.includes('zyra v0.9.3'));
   });
 
   it('prints structured summary with zyra context', async () => {

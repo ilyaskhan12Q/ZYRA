@@ -1,6 +1,6 @@
 {
   "name": "zyra",
-  "version": "0.6.0",
+  "version": "0.9.3",
   "description": "Agent-native web performance investigation and optimization tool",
   "type": "module",
   "main": "dist/src/index.js",
@@ -11,6 +11,8 @@
   "files": [
     "dist",
     "README.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "LICENSE",
     "SKILL.md",
     ".context",
@@ -21,7 +23,7 @@
     "postbuild": "chmod +x dist/src/cli/index.js",
     "typecheck": "tsc --noEmit",
     "test": "node --test dist/tests/**/*.test.js",
-    "test:unit": "node --test dist/tests/context/**/*.test.js dist/tests/cli/**/*.test.js dist/tests/evidence/**/*.test.js dist/tests/rules/**/*.test.js dist/tests/codebase/**/*.test.js dist/tests/correlation/**/*.test.js dist/tests/agent/**/*.test.js",
+    "test:unit": "node --test dist/tests/context/**/*.test.js dist/tests/cli/**/*.test.js dist/tests/evidence/**/*.test.js dist/tests/rules/**/*.test.js dist/tests/codebase/**/*.test.js dist/tests/correlation/**/*.test.js dist/tests/agent/**/*.test.js dist/tests/fixes/**/*.test.js dist/tests/verification/**/*.test.js dist/tests/ci/**/*.test.js",
     "test:integration": "node --test dist/tests/lighthouse/runner.integration.test.js",
     "lint": "echo 'Lint check clean'"
   },
