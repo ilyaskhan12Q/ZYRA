@@ -171,4 +171,40 @@ describe('CI CLI Commands — Phase 09 Validation', () => {
       }
     );
   });
+
+  it('supports CIBaseline format in --current option for CI check', async () => {
+    const baselineOut = path.join(tempDir, 'baseline-for-current.json');
+    const generousBudget = JSON.stringify({
+      budgets: { LCP: 10000, FCP: 10000, TBT: 50000, SpeedIndex: 15000, CLS: 0.5 }
+    });
+
+    // Capture baseline to produce a CIBaseline JSON file
+    await execFileAsync(
+      process.execPath,
+      [CLI_PATH, 'ci', 'baseline', 'https://example.com/', '--current', FIXTURE_MOBILE, '--output', baselineOut]
+    );
+
+    // Pass the CIBaseline file as --current
+    const { stdout } = await execFileAsync(
+      process.execPath,
+      [
+        CLI_PATH,
+        'ci',
+        'https://example.com/',
+        '--current',
+        baselineOut,
+        '--baseline',
+        baselineOut,
+        '--budget',
+        generousBudget,
+        '--json'
+      ]
+    );
+
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.schemaVersion, '1.0');
+    assert.equal(parsed.status, 'PASS');
+    assert.equal(parsed.exitCode, 0);
+    assert.ok(parsed.currentRun.metrics.lcp > 0);
+  });
 });
