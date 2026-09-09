@@ -1455,7 +1455,7 @@ async function handleCiCommand(args: string[]): Promise<void> {
     try {
       const content = await fs.readFile(currentPath, 'utf-8');
       const parsed = JSON.parse(content);
-      const rawData = parsed.evidence ? parsed.evidence : parsed;
+      const rawData: any = parsed?.snapshot?.evidence || parsed?.evidence || parsed;
       if (!rawData.schemaVersion && rawData.audits && (rawData.lighthouseVersion || rawData.categories)) {
         const finalUrl = targetUrl || rawData.finalDisplayedUrl || rawData.requestedUrl || 'https://example.com/';
         currentEvidence = normalizeEvidence({
