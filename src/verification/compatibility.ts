@@ -19,19 +19,19 @@ export interface CompatibilityCheckResult {
 export function createMeasurementSnapshot(evidence: ZyraEvidence): MeasurementSnapshot {
   return {
     id: `snap_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    timestamp: evidence.target.timestamp,
-    url: evidence.target.url,
-    device: evidence.target.device,
+    timestamp: evidence?.target?.timestamp || new Date().toISOString(),
+    url: evidence?.target?.url || '',
+    device: evidence?.target?.device || 'mobile',
     metrics: {
-      fcp: evidence.metrics.fcp?.value ?? null,
-      lcp: evidence.metrics.lcp?.value ?? null,
-      cls: evidence.metrics.cls?.value ?? null,
-      tbt: evidence.metrics.tbt?.value ?? null,
-      speedIndex: evidence.metrics.speedIndex?.value ?? null,
-      inp: evidence.metrics.inp?.value ?? null
+      fcp: evidence?.metrics?.fcp?.value ?? null,
+      lcp: evidence?.metrics?.lcp?.value ?? null,
+      cls: evidence?.metrics?.cls?.value ?? null,
+      tbt: evidence?.metrics?.tbt?.value ?? null,
+      speedIndex: evidence?.metrics?.speedIndex?.value ?? null,
+      inp: evidence?.metrics?.inp?.value ?? null
     },
     scores: {
-      performance: evidence.scores.performance ?? null
+      performance: evidence?.scores?.performance ?? null
     },
     evidence
   };
@@ -71,6 +71,13 @@ export function validateMeasurementCompatibility(
     return {
       compatible: false,
       reason: `Incompatible evidence schema versions: baseline (${baseline.schemaVersion}), postFix (${postFix.schemaVersion}). Schema 1.0 required.`
+    };
+  }
+
+  if (!baseline.target || !postFix.target) {
+    return {
+      compatible: false,
+      reason: 'Both baseline and post-fix evidence must include valid target metadata.'
     };
   }
 

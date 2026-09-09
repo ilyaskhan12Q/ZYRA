@@ -262,4 +262,22 @@
 - [x] Bump package version to `0.9.0`
 - [x] Mark Phase 09 complete
 
+---
+
+## BUG FIX & REVALIDATION (Post-Phase 09)
+- [x] Reproduce BUG-001 (`zyra verify` crash with `TypeError: Cannot read properties of undefined (reading 'timestamp')`)
+- [x] Inspect contracts between `CIBaseline`, `MeasurementSnapshot`, `ZyraEvidence`, and `VerificationResult`
+- [x] Implement `extractEvidenceFromPayload` in `src/cli/index.ts` to unwrap `snapshot.evidence` from `CIBaseline`
+- [x] Add schema validation via `validateEvidence` before verification execution
+- [x] Add defensive guards to `createMeasurementSnapshot` and `validateMeasurementCompatibility` in `src/verification/compatibility.ts`
+- [x] Add 8 regression tests in `tests/verification/cli.test.ts` covering valid CIBaseline, formatting, and all failure modes without `TypeError`
+- [x] Re-run complete verification flow and explicitly confirm `APPLIED != IMPROVED`
+- [x] Revalidate Phases 01–09 core workflows against real websites and fixtures
+- [x] Measure and record CLI startup performance timings (~1.4s)
+- [x] Verify CI exit codes (0, 1, 2, 3, 4) and regression gating stability
+- [x] Recheck security constraints (read-only, secret exclusion, path traversal, symlink escapes)
+- [x] Execute full test suite (328/328 passing across 88 suites), typecheck, and build
+- [x] Update `docs/REAL-USER-VALIDATION-REPORT.md` with BUG-001 resolution and updated readiness score (88/100)
+- [x] Update persistent context (`.context/`)
+
 
