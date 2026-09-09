@@ -181,7 +181,7 @@ zyra rules
 zyra rules --json
 ```
 
-### 5. Fix Planning & Safe Modification (Phase 07)
+### 5. Fix Planning & Safe Modification 
 Plan evidence-backed code modifications and apply them safely with transactional rollback protection:
 
 ```bash
@@ -201,7 +201,7 @@ zyra fix apply ./plan.json --workspace /path/to/project --dry-run
 zyra fix apply ./plan.json --workspace /path/to/project
 ```
 
-### 6. Post-Fix Verification (Phase 08)
+### 6. Post-Fix Verification 
 Empirically verify performance improvements between baseline evidence and post-fix runs:
 
 ```bash
@@ -221,7 +221,7 @@ zyra verify https://example.com --workspace /path/to/project --baseline ./baseli
 zyra verify https://example.com --workspace /path/to/project --baseline ./baseline.json --json --output ./verification.json
 ```
 
-### 7. CI / Regression Detection & Performance Budgets (Phase 09)
+### 7. CI / Regression Detection & Performance Budgets
 Run automated performance regression gating and budget enforcement in CI pipelines:
 
 ```bash
