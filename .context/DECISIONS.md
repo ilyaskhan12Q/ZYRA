@@ -247,4 +247,12 @@ This document tracks all significant architectural decisions made for ZYRA.
 * **Decision:** Require strict compatibility validation (origin, pathname, and device profile matching). Generate deterministic, aligned terminal tables and GitHub-flavored Markdown reports with explicit badges (`REGRESSION`, `VIOLATION`, `IMPROVED`, `PASS`).
 * **Consequences:** Prevents false comparisons between desktop baselines and mobile PR runs. Delivers rich, scannable PR comments directly inside CI workflows.
 
+---
+
+## ADR-031: Polymorphic Baseline Ingestion & Invariant Validation for Verification Subsystem
+* **Status:** Accepted
+* **Context:** `zyra ci baseline` persists authoritative baselines wrapped in `CIBaseline` (`snapshot.evidence`), whereas raw runs produce `ZyraEvidence` or `MeasurementSnapshot`. Passing a `CIBaseline` file to `zyra verify` previously caused a crash because the CLI did not unwrap `snapshot.evidence` before delegating to the verification engine (BUG-001).
+* **Decision:** Implement polymorphic payload extraction (`extractEvidenceFromPayload`) in the CLI ingestion boundary to unwrap evidence from `CIBaseline` (`snapshot.evidence`), `MeasurementSnapshot` (`evidence`), or raw `ZyraEvidence`. Enforce schema validation (`validateEvidence`) prior to comparison. Add defensive null-guards to `createMeasurementSnapshot` and `validateMeasurementCompatibility` so malformed inputs fail safely with informative diagnostic messages and exit code `1` rather than throwing uncaught `TypeError`s.
+* **Consequences:** Unifies baseline consumption across CI and verification subsystems without creating redundant baseline schemas or weakening validation rules. Ensures 100% interoperability between `zyra ci baseline` and `zyra verify`.
+
 

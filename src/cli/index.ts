@@ -5,6 +5,8 @@ import * as path from 'node:path';
 import { loadContext, validateContext } from '../context/loader.js';
 import { collectEvidence } from '../evidence/collector.js';
 import { normalizeEvidence } from '../evidence/normalizer.js';
+import { validateEvidence } from '../evidence/validator.js';
+import { type ZyraEvidence } from '../evidence/types.js';
 import { type DeviceType } from '../lighthouse/types.js';
 import { LighthouseError, InvalidUrlError } from '../lighthouse/errors.js';
 import { RuleEngine } from '../rules/engine.js';
@@ -37,6 +39,7 @@ import {
   loadCIBaseline,
   parseBudgetConfig,
   formatCIReportTerminal,
+  CI_SCHEMA_VERSION,
   CI_EXIT_CODES,
   type CIPolicy,
   type CIResult
@@ -917,10 +920,52 @@ function formatPercentageStr(pct: number | null): string {
   return `${prefix}${pct.toFixed(1)}%`;
 }
 
+/**
+ * Extracts ZyraEvidence from supported container formats:
+ * - CIBaseline (Schema 1.0) with nested snapshot.evidence
+ * - MeasurementSnapshot or wrapped object with .evidence
+ * - Raw ZyraEvidence (Schema 1.0) with target and metrics
+ */
+function extractEvidenceFromPayload(payload: unknown, sourceLabel = 'baseline'): ZyraEvidence {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error(`${sourceLabel} payload must be a valid non-null JSON object.`);
+  }
+
+  const obj = payload as Record<string, any>;
+
+  // Case 1: CIBaseline format (nested in snapshot.evidence)
+  if (obj.snapshot && typeof obj.snapshot === 'object') {
+    if (!obj.snapshot.evidence || typeof obj.snapshot.evidence !== 'object') {
+      throw new Error(`Malformed ${sourceLabel} baseline: snapshot is present but snapshot.evidence is missing.`);
+    }
+    return obj.snapshot.evidence as ZyraEvidence;
+  }
+
+  // Case 2: MeasurementSnapshot or wrapped format (has .evidence)
+  if (obj.evidence && typeof obj.evidence === 'object') {
+    return obj.evidence as ZyraEvidence;
+  }
+
+  // Case 3: Raw ZyraEvidence format (has target and metrics)
+  if (obj.target && typeof obj.target === 'object' && obj.metrics && typeof obj.metrics === 'object') {
+    return obj as ZyraEvidence;
+  }
+
+  // Case 4: Looks like a CIBaseline without required snapshot
+  if (
+    obj.schemaVersion === CI_SCHEMA_VERSION ||
+    (typeof obj.id === 'string' && (obj.id.startsWith('base_') || obj.id.startsWith('snap_')))
+  ) {
+    throw new Error(`Malformed ${sourceLabel} baseline: missing snapshot or evidence.`);
+  }
+
+  throw new Error(`Unrecognized ${sourceLabel} format. Expected CIBaseline (v1.0), MeasurementSnapshot, or ZyraEvidence (v1.0).`);
+}
+
 async function handleVerifyCommand(args: string[]): Promise<void> {
   const isJson = args.includes('--json');
   const isDesktop = args.includes('--desktop');
-  const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
+  const isMobile = args.includes('--mobile');
 
   let targetUrl: string | undefined;
   let workspacePath: string | undefined;
@@ -969,12 +1014,15 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  let baselineEvidence: any;
+  let baselineEvidence: ZyraEvidence;
   try {
     const content = await fs.readFile(baselinePath, 'utf-8');
-    baselineEvidence = JSON.parse(content);
-    if (baselineEvidence.evidence) {
-      baselineEvidence = baselineEvidence.evidence;
+    const parsed = JSON.parse(content);
+    baselineEvidence = extractEvidenceFromPayload(parsed, 'baseline');
+    const validation = validateEvidence(baselineEvidence);
+    if (!validation.isValid) {
+      console.error(`❌ Invalid baseline evidence: ${validation.errors.join('; ')}`);
+      process.exit(1);
     }
   } catch (err) {
     console.error(`❌ Failed to read baseline evidence file: ${(err as Error).message}`);
@@ -989,6 +1037,12 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
     console.error('❌ Target URL required: zyra verify <url> --workspace <path> --baseline <file>');
     process.exit(1);
   }
+
+  const device: DeviceType = isDesktop
+    ? 'desktop'
+    : isMobile
+      ? 'mobile'
+      : (baselineEvidence.target?.device === 'desktop' ? 'desktop' : 'mobile');
 
   const effectiveWorkspace = workspacePath || process.cwd();
 
@@ -1014,15 +1068,18 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
     }
   }
 
-  let postFixEvidence: any;
-  const repeatedRunsEvidence: any[] = [];
+  let postFixEvidence: ZyraEvidence | undefined;
+  const repeatedRunsEvidence: ZyraEvidence[] = [];
 
   if (postFixPath) {
     try {
       const content = await fs.readFile(postFixPath, 'utf-8');
-      postFixEvidence = JSON.parse(content);
-      if (postFixEvidence.evidence) {
-        postFixEvidence = postFixEvidence.evidence;
+      const parsed = JSON.parse(content);
+      postFixEvidence = extractEvidenceFromPayload(parsed, 'post-fix');
+      const validation = validateEvidence(postFixEvidence);
+      if (!validation.isValid) {
+        console.error(`❌ Invalid post-fix evidence: ${validation.errors.join('; ')}`);
+        process.exit(1);
       }
     } catch (err) {
       console.error(`❌ Failed to read post-fix evidence file: ${(err as Error).message}`);
@@ -1045,6 +1102,11 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
       console.error(`❌ Post-fix measurement failed: ${(error as Error).message}`);
       process.exit(1);
     }
+  }
+
+  if (!postFixEvidence) {
+    console.error('❌ Post-fix evidence required for verification.');
+    process.exit(1);
   }
 
   try {

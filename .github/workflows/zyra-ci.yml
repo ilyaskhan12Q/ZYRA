@@ -38,6 +38,7 @@ jobs:
           node dist/src/cli/index.js ci https://example.com/ \
             --current fixtures/lighthouse/synthetic-mobile.json \
             --baseline fixtures/lighthouse/synthetic-mobile.json \
+            --budget '{"budgets":{"LCP":6000,"FCP":5000,"TBT":30000,"SpeedIndex":7000}}' \
             --output zyra-ci-result.json \
             --markdown-output zyra-ci-summary.md
           if [ -n "$GITHUB_STEP_SUMMARY" ]; then

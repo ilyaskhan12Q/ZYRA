@@ -64,9 +64,15 @@
     - `security.test.ts`: Read-only execution, path traversal guards, corrupt JSON handling (4 tests).
     - `determinism.test.ts`: Purity, reproducibility, zero external network dependencies (5 tests).
   - Preserved all 269 Phase 01–08 tests without regression.
+- **BUG-001 Fix & Regression Suite (`src/cli/index.ts`, `src/verification/compatibility.ts`, `tests/verification/cli.test.ts`):**
+  - Resolved P2 unwrapping crash in `zyra verify` when consuming `CIBaseline` files.
+  - Implemented `extractEvidenceFromPayload` supporting `CIBaseline`, `MeasurementSnapshot`, and `ZyraEvidence`.
+  - Added schema validation via `validateEvidence` before verification execution.
+  - Added defensive null-guards to `createMeasurementSnapshot` and `validateMeasurementCompatibility`.
+  - Added 8 dedicated regression tests in `tests/verification/cli.test.ts` covering valid CIBaselines, human formatting, malformed JSON, missing snapshot, missing evidence, invalid evidence data, profile mismatches, and URL mismatches.
 
 ## In Progress
-- None. Phase 09 is complete.
+- None. Bug fix and full revalidation complete.
 
 ## Next
 - **Phase 10 — Advanced CDP & Trace Profiling:** Chrome DevTools Protocol tracing, CPU flame graphs, main-thread long task breakdown, and memory leak analysis.
@@ -77,8 +83,9 @@
 ## Known Limitations
 - Lab measurements run in controlled local environments (Lighthouse); field Core Web Vitals (RUM/CrUX) require real-user monitoring.
 - Phase 09 provides non-destructive gating and PR reporting; automated fix rollbacks in CI must be invoked explicitly via Phase 07 rollback mechanisms.
+- CLI startup overhead (~1.4s) reflects eager module loading of lighthouse/chrome-launcher; targeted for lazy-loading optimization in future release.
 
 ## Last Verification
 - `npm run typecheck`: Passed (0 errors)
 - `npm run build`: Passed (Clean build in `dist/`)
-- `npm test`: Passed (320 tests passing, 0 failing, 87 suites)
+- `npm test`: Passed (328 tests passing, 0 failing, 88 suites)

@@ -4,6 +4,16 @@ All notable changes to the ZYRA project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.9.4] - 2026-09-09
+
+### Fixed
+- **BUG-001 (Verification Crash with CIBaseline Input):**
+  - Fixed `zyra verify` to properly unwrap `snapshot.evidence` when consuming `CIBaseline` files.
+  - Implemented `extractEvidenceFromPayload` supporting `CIBaseline`, `MeasurementSnapshot`, and `ZyraEvidence` containers.
+  - Enforced schema validation via `validateEvidence` prior to verification comparison.
+  - Added defensive guards in `createMeasurementSnapshot` and `validateMeasurementCompatibility` against missing target/metrics data.
+  - Added 8 dedicated regression tests in `tests/verification/cli.test.ts` ensuring safe handling across valid CIBaselines, human tables, malformed JSON, missing snapshots, missing evidence, invalid data, profile mismatches, and URL mismatches without unhandled `TypeError`s.
+
 ## [0.9.3] - 2026-09-08
 
 ### Added
