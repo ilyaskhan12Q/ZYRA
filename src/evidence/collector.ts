@@ -25,6 +25,7 @@ export async function collectEvidence(
   const runResult = await runLighthouse(options);
 
   // 2. Normalize raw results into ZYRA Evidence contract
+  options.onProgress?.('Processing & validating evidence...');
   const evidence = normalizeEvidence(runResult);
 
   // 3. Validate normalized evidence

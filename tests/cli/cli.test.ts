@@ -107,6 +107,8 @@ describe('CLI — Command Execution', () => {
         '30000'
       ]);
 
+      assert.ok(stdout.includes('Measuring performance for'));
+      assert.ok(stdout.includes('✔ Measurement completed in'));
       assert.ok(stdout.includes('ZYRA — Performance Analysis'));
       assert.ok(stdout.includes(testUrl));
       assert.ok(stdout.includes('PERFORMANCE EVIDENCE'));
@@ -141,6 +143,11 @@ describe('CLI — Command Execution', () => {
         '--timeout',
         '30000'
       ]);
+
+      // Verify no progress or loading noise leaked into stdout
+      assert.ok(!stdout.includes('Measuring performance'));
+      assert.ok(!stdout.includes('✔ Measurement completed'));
+      assert.ok(!stdout.includes('⏳'));
 
       const parsed = JSON.parse(stdout);
       // Evidence contract preserved
@@ -299,5 +306,75 @@ describe('CLI — Command Execution', () => {
         return true;
       }
     );
+  });
+
+  it('handles measurement timeout gracefully with timeout status and exit code 1', async () => {
+    const server = http.createServer((_req, _res) => {
+      // Deliberately hold connection open to force timeout
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 8080;
+    const testUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      await assert.rejects(
+        async () => {
+          await execFileAsync(process.execPath, [
+            cliPath,
+            testUrl,
+            '--timeout',
+            '200'
+          ]);
+        },
+        (err: { code: number; stdout: string; stderr: string }) => {
+          assert.equal(err.code, 1);
+          assert.ok(
+            err.stdout.includes('✖ Measurement timed out after') ||
+            err.stderr.includes('timed out') ||
+            err.stderr.includes('Performance Measurement Failed')
+          );
+          return true;
+        }
+      );
+    } finally {
+      server.close();
+    }
+  });
+
+  it('handles measurement timeout with clean JSON error and zero progress text with --json', async () => {
+    const server = http.createServer((_req, _res) => {
+      // Deliberately hold connection open to force timeout
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const address = server.address();
+    const port = typeof address === 'object' && address ? address.port : 8080;
+    const testUrl = `http://127.0.0.1:${port}`;
+
+    try {
+      await assert.rejects(
+        async () => {
+          await execFileAsync(process.execPath, [
+            cliPath,
+            testUrl,
+            '--json',
+            '--timeout',
+            '200'
+          ]);
+        },
+        (err: { code: number; stdout: string; stderr: string }) => {
+          assert.equal(err.code, 1);
+          // Stdout must be completely empty
+          assert.equal(err.stdout, '');
+          // Stderr must be clean parseable JSON
+          const parsed = JSON.parse(err.stderr);
+          assert.equal(parsed.error, true);
+          assert.ok(parsed.message.includes('timed out'));
+          return true;
+        }
+      );
+    } finally {
+      server.close();
+    }
   });
 });
