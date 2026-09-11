@@ -1,0 +1,484 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%" fill="none">
+  <defs>
+    <style>
+      @keyframes pulse-dot {
+        0% { stroke-dashoffset: 60; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+
+      /* Stage 1: MEASURE (0% - 10%) */
+      @keyframes node-1 {
+        0%, 9% { stroke: #58a6ff; fill: #121d2f; stroke-width: 2px; }
+        10%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-1 {
+        0%, 9.5% { opacity: 1; transform: translateY(0); }
+        10%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-1 {
+        0% { stroke-dashoffset: 80; opacity: 0; }
+        1% { opacity: 1; }
+        9% { stroke-dashoffset: 0; opacity: 1; }
+        10%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 2: EVIDENCE (10% - 20%) */
+      @keyframes node-2 {
+        0%, 9% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        10%, 19% { stroke: #38bdf8; fill: #0c2738; stroke-width: 2px; }
+        20%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-2 {
+        0%, 9.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        10%, 19.5% { opacity: 1; transform: translateY(0); }
+        20%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-2a {
+        0%, 9% { opacity: 0.15; }
+        10% { stroke-dashoffset: 80; opacity: 1; }
+        19% { stroke-dashoffset: 0; opacity: 1; }
+        20%, 100% { opacity: 0.15; }
+      }
+      @keyframes flow-2b {
+        0%, 9% { opacity: 0.15; }
+        10% { stroke-dashoffset: 60; opacity: 1; }
+        19% { stroke-dashoffset: 0; opacity: 1; }
+        20%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 3: RULES (20% - 30%) */
+      @keyframes node-3 {
+        0%, 19% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        20%, 29% { stroke: #bc8cff; fill: #241938; stroke-width: 2px; }
+        30%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-3 {
+        0%, 19.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        20%, 29.5% { opacity: 1; transform: translateY(0); }
+        30%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-3 {
+        0%, 19% { opacity: 0.15; }
+        20% { stroke-dashoffset: 90; opacity: 1; }
+        29% { stroke-dashoffset: 0; opacity: 1; }
+        30%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 4: CODEBASE (30% - 40%) */
+      @keyframes node-4 {
+        0%, 29% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        30%, 39% { stroke: #d29922; fill: #2a200f; stroke-width: 2px; }
+        40%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-4 {
+        0%, 29.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        30%, 39.5% { opacity: 1; transform: translateY(0); }
+        40%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-4 {
+        0%, 29% { opacity: 0.15; }
+        30% { stroke-dashoffset: 80; opacity: 1; }
+        39% { stroke-dashoffset: 0; opacity: 1; }
+        40%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 5: CORRELATE (40% - 50%) */
+      @keyframes node-5 {
+        0%, 39% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        40%, 49% { stroke: #a371f7; fill: #211538; stroke-width: 2px; }
+        50%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-5 {
+        0%, 39.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        40%, 49.5% { opacity: 1; transform: translateY(0); }
+        50%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-5 {
+        0%, 39% { opacity: 0.15; }
+        40% { stroke-dashoffset: 90; opacity: 1; }
+        49% { stroke-dashoffset: 0; opacity: 1; }
+        50%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 6: DIAGNOSE (50% - 60%) */
+      @keyframes node-6 {
+        0%, 49% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        50%, 59% { stroke: #f778ba; fill: #331526; stroke-width: 2px; }
+        60%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-6 {
+        0%, 49.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        50%, 59.5% { opacity: 1; transform: translateY(0); }
+        60%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-6 {
+        0%, 49% { opacity: 0.15; }
+        50% { stroke-dashoffset: 60; opacity: 1; }
+        59% { stroke-dashoffset: 0; opacity: 1; }
+        60%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 7: FIX (60% - 70%) */
+      @keyframes node-7 {
+        0%, 59% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        60%, 69% { stroke: #3fb950; fill: #0f2d18; stroke-width: 2px; }
+        70%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-7 {
+        0%, 59.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        60%, 69.5% { opacity: 1; transform: translateY(0); }
+        70%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-7 {
+        0%, 59% { opacity: 0.15; }
+        60% { stroke-dashoffset: 80; opacity: 1; }
+        69% { stroke-dashoffset: 0; opacity: 1; }
+        70%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 8: RE-MEASURE (70% - 80%) */
+      @keyframes node-8 {
+        0%, 69% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        70%, 79% { stroke: #38bdf8; fill: #0c2738; stroke-width: 2px; }
+        80%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-8 {
+        0%, 69.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        70%, 79.5% { opacity: 1; transform: translateY(0); }
+        80%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-8 {
+        0%, 69% { opacity: 0.15; }
+        70% { stroke-dashoffset: 120; opacity: 1; }
+        79% { stroke-dashoffset: 0; opacity: 1; }
+        80%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 9: VERIFY (80% - 90%) */
+      @keyframes node-9 {
+        0%, 79% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        80%, 89% { stroke: #2ea043; fill: #0f2d18; stroke-width: 2px; }
+        90%, 100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-9 {
+        0%, 79.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        80%, 89.5% { opacity: 1; transform: translateY(0); }
+        90%, 100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+      @keyframes flow-9 {
+        0%, 79% { opacity: 0.15; }
+        80% { stroke-dashoffset: 120; opacity: 1; }
+        89% { stroke-dashoffset: 0; opacity: 1; }
+        90%, 100% { opacity: 0.15; }
+      }
+      @keyframes loop-verify {
+        0%, 79% { opacity: 0.15; }
+        80% { stroke-dashoffset: 400; opacity: 1; }
+        89% { stroke-dashoffset: 0; opacity: 1; }
+        90%, 100% { opacity: 0.15; }
+      }
+
+      /* Stage 10: CI (90% - 100%) */
+      @keyframes node-10 {
+        0%, 89% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+        90%, 99% { stroke: #56d364; fill: #13331b; stroke-width: 2px; }
+        100% { stroke: #30363d; fill: #161b22; stroke-width: 1px; }
+      }
+      @keyframes hud-10 {
+        0%, 89.9% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+        90%, 99.5% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(4px); pointer-events: none; }
+      }
+
+      .node { rx: 8px; transition: all 0.3s ease; }
+      .node-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 600; text-anchor: middle; dominant-baseline: central; fill: #e6edf3; }
+      .node-subtext { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 500; text-anchor: middle; dominant-baseline: central; fill: #8b949e; }
+      .path-base { stroke: #21262d; stroke-width: 2px; fill: none; }
+      .path-pulse { stroke-width: 2.5px; fill: none; stroke-dasharray: 6 6; }
+      
+      .n1 { animation: node-1 20s infinite ease-in-out; }
+      .n2 { animation: node-2 20s infinite ease-in-out; }
+      .n3 { animation: node-3 20s infinite ease-in-out; }
+      .n4 { animation: node-4 20s infinite ease-in-out; }
+      .n5 { animation: node-5 20s infinite ease-in-out; }
+      .n6 { animation: node-6 20s infinite ease-in-out; }
+      .n7 { animation: node-7 20s infinite ease-in-out; }
+      .n8 { animation: node-8 20s infinite ease-in-out; }
+      .n9 { animation: node-9 20s infinite ease-in-out; }
+      .n10 { animation: node-10 20s infinite ease-in-out; }
+
+      .f1 { stroke: #58a6ff; animation: flow-1 20s infinite linear; }
+      .f2a { stroke: #38bdf8; animation: flow-2a 20s infinite linear; }
+      .f2b { stroke: #d29922; animation: flow-2b 20s infinite linear; }
+      .f3 { stroke: #bc8cff; animation: flow-3 20s infinite linear; }
+      .f4 { stroke: #d29922; animation: flow-4 20s infinite linear; }
+      .f5 { stroke: #a371f7; animation: flow-5 20s infinite linear; }
+      .f6 { stroke: #f778ba; animation: flow-6 20s infinite linear; }
+      .f7 { stroke: #3fb950; animation: flow-7 20s infinite linear; }
+      .f8 { stroke: #38bdf8; animation: flow-8 20s infinite linear; }
+      .f9 { stroke: #56d364; animation: flow-9 20s infinite linear; }
+      .floop { stroke: #58a6ff; animation: loop-verify 20s infinite linear; }
+
+      .h1 { animation: hud-1 20s infinite ease-in-out; }
+      .h2 { animation: hud-2 20s infinite ease-in-out; }
+      .h3 { animation: hud-3 20s infinite ease-in-out; }
+      .h4 { animation: hud-4 20s infinite ease-in-out; }
+      .h5 { animation: hud-5 20s infinite ease-in-out; }
+      .h6 { animation: hud-6 20s infinite ease-in-out; }
+      .h7 { animation: hud-7 20s infinite ease-in-out; }
+      .h8 { animation: hud-8 20s infinite ease-in-out; }
+      .h9 { animation: hud-9 20s infinite ease-in-out; }
+      .h10 { animation: hud-10 20s infinite ease-in-out; }
+
+      .hud-badge { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+      .hud-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; fill: #ffffff; }
+      .hud-desc { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; font-weight: 400; fill: #c9d1d9; }
+      .hud-meta { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 11px; font-weight: 400; fill: #8b949e; }
+    </style>
+  </defs>
+
+  <!-- Container Surface -->
+  <rect width="960" height="540" rx="12" fill="#090d16" stroke="#21262d" stroke-width="1.5" />
+
+  <!-- Grid Pattern Overlay -->
+  <g opacity="0.08" stroke="#58a6ff" stroke-width="1">
+    <path d="M0 60h960M0 120h960M0 180h960M0 240h960M0 300h960M0 360h960M0 420h960" />
+    <path d="M120 0v540M240 0v540M360 0v540M480 0v540M600 0v540M720 0v540M840 0v540" />
+  </g>
+
+  <!-- Top Bar / Identity Header -->
+  <g transform="translate(24, 20)">
+    <circle cx="6" cy="12" r="4" fill="#3fb950" style="animation: blink 2s infinite ease-in-out;" />
+    <text x="18" y="16" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="700" fill="#7ee787" letter-spacing="1">ZYRA INVESTIGATION ENGINE</text>
+    <text x="240" y="16" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="400" fill="#8b949e">Deterministic Browser &amp; Codebase Correlation Loop</text>
+    
+    <!-- Legend / Path Indicators -->
+    <g transform="translate(620, 2)">
+      <circle cx="6" cy="10" r="3" fill="#38bdf8" />
+      <text x="14" y="13" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#8b949e">Telemetry</text>
+      <circle cx="80" cy="10" r="3" fill="#d29922" />
+      <text x="88" y="13" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#8b949e">Codebase</text>
+      <circle cx="152" cy="10" r="3" fill="#3fb950" />
+      <text x="160" y="13" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#8b949e">Verification &amp; CI</text>
+    </g>
+  </g>
+
+  <!-- ================= CONNECTION PATHS (BACKGROUND) ================= -->
+
+  <!-- Path 1: MEASURE -> EVIDENCE -->
+  <line x1="165" y1="95" x2="245" y2="95" class="path-base" />
+  <line x1="165" y1="95" x2="245" y2="95" class="path-pulse f1" />
+
+  <!-- Path 2a: EVIDENCE -> RULES -->
+  <line x1="365" y1="95" x2="445" y2="95" class="path-base" />
+  <line x1="365" y1="95" x2="445" y2="95" class="path-pulse f2a" />
+
+  <!-- Path 2b: EVIDENCE -> CODEBASE (Branch down) -->
+  <path d="M305 120 V 175" class="path-base" />
+  <path d="M305 120 V 175" class="path-pulse f2b" />
+
+  <!-- Path 3: RULES -> DIAGNOSE -->
+  <path d="M565 95 C 605 95, 605 145, 645 145" class="path-base" />
+  <path d="M565 95 C 605 95, 605 145, 645 145" class="path-pulse f3" />
+
+  <!-- Path 4: CODEBASE -> CORRELATE -->
+  <line x1="365" y1="200" x2="445" y2="200" class="path-base" />
+  <line x1="365" y1="200" x2="445" y2="200" class="path-pulse f4" />
+
+  <!-- Path 5: CORRELATE -> DIAGNOSE -->
+  <path d="M565 200 C 605 200, 605 145, 645 145" class="path-base" />
+  <path d="M565 200 C 605 200, 605 145, 645 145" class="path-pulse f5" />
+
+  <!-- Path 6: DIAGNOSE -> FIX -->
+  <line x1="765" y1="145" x2="805" y2="145" class="path-base" />
+  <line x1="765" y1="145" x2="805" y2="145" class="path-pulse f6" />
+
+  <!-- Path 7: FIX -> RE-MEASURE -->
+  <path d="M855 170 V 275" class="path-base" />
+  <path d="M855 170 V 275" class="path-pulse f7" />
+
+  <!-- Path 8: RE-MEASURE -> VERIFY -->
+  <line x1="805" y1="300" x2="685" y2="300" class="path-base" />
+  <line x1="805" y1="300" x2="685" y2="300" class="path-pulse f8" />
+
+  <!-- Path 9: VERIFY -> CI -->
+  <line x1="565" y1="300" x2="445" y2="300" class="path-base" />
+  <line x1="565" y1="300" x2="445" y2="300" class="path-pulse f9" />
+
+  <!-- Loop Path: VERIFY -> MEASURE (Iterative optimization feedback loop) -->
+  <path d="M625 325 C 625 375, 105 375, 105 125" class="path-base" stroke-dasharray="4 4" />
+  <path d="M625 325 C 625 375, 105 375, 105 125" class="path-pulse floop" />
+  <text x="350" y="366" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10.5" font-weight="600" fill="#58a6ff" opacity="0.85">EMPIRICAL FEEDBACK LOOP (APPLIED != IMPROVED)</text>
+
+  <!-- ================= NODES ================= -->
+
+  <!-- Node 1: MEASURE -->
+  <g transform="translate(45, 70)">
+    <rect width="120" height="50" class="node n1" />
+    <text x="60" y="20" class="node-text">MEASURE</text>
+    <text x="60" y="36" class="node-subtext">Lighthouse / Chrome</text>
+  </g>
+
+  <!-- Node 2: EVIDENCE -->
+  <g transform="translate(245, 70)">
+    <rect width="120" height="50" class="node n2" />
+    <text x="60" y="20" class="node-text">EVIDENCE</text>
+    <text x="60" y="36" class="node-subtext">Normalized Units (ms)</text>
+  </g>
+
+  <!-- Node 3: RULES -->
+  <g transform="translate(445, 70)">
+    <rect width="120" height="50" class="node n3" />
+    <text x="60" y="20" class="node-text">RULES</text>
+    <text x="60" y="36" class="node-subtext">16 Deterministic Rules</text>
+  </g>
+
+  <!-- Node 4: CODEBASE (Branch) -->
+  <g transform="translate(245, 175)">
+    <rect width="120" height="50" class="node n4" />
+    <text x="60" y="20" class="node-text">CODEBASE</text>
+    <text x="60" y="36" class="node-subtext">Read-Only AST &amp; Routes</text>
+  </g>
+
+  <!-- Node 5: CORRELATE (Branch) -->
+  <g transform="translate(445, 175)">
+    <rect width="120" height="50" class="node n5" />
+    <text x="60" y="20" class="node-text">CORRELATE</text>
+    <text x="60" y="36" class="node-subtext">Multi-Signal Mapping</text>
+  </g>
+
+  <!-- Node 6: DIAGNOSE -->
+  <g transform="translate(645, 120)">
+    <rect width="120" height="50" class="node n6" />
+    <text x="60" y="20" class="node-text">DIAGNOSE</text>
+    <text x="60" y="36" class="node-subtext">Root Causes &amp; Confidence</text>
+  </g>
+
+  <!-- Node 7: FIX -->
+  <g transform="translate(805, 120)">
+    <rect width="100" height="50" class="node n7" />
+    <text x="50" y="20" class="node-text">FIX</text>
+    <text x="50" y="36" class="node-subtext">Safe &amp; Reversible</text>
+  </g>
+
+  <!-- Node 8: RE-MEASURE -->
+  <g transform="translate(805, 275)">
+    <rect width="100" height="50" class="node n8" />
+    <text x="50" y="20" class="node-text">RE-MEASURE</text>
+    <text x="50" y="36" class="node-subtext">Post-Fix Lab Run</text>
+  </g>
+
+  <!-- Node 9: VERIFY -->
+  <g transform="translate(565, 275)">
+    <rect width="120" height="50" class="node n9" />
+    <text x="60" y="20" class="node-text">VERIFY</text>
+    <text x="60" y="36" class="node-subtext">Delta vs Noise Floor</text>
+  </g>
+
+  <!-- Node 10: CI -->
+  <g transform="translate(325, 275)">
+    <rect width="120" height="50" class="node n10" />
+    <text x="60" y="20" class="node-text">CI GATE</text>
+    <text x="60" y="36" class="node-subtext">Exit 0-4 &amp; PR Comments</text>
+  </g>
+
+  <!-- ================= ACTIVE STAGE INSPECTION HUD ================= -->
+  <g transform="translate(24, 400)">
+    <!-- HUD Outer Box -->
+    <rect width="912" height="116" rx="8" fill="#0d1117" stroke="#30363d" stroke-width="1.2" />
+    
+    <!-- Stage 1 HUD -->
+    <g class="h1" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#1f3554" stroke="#58a6ff" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#58a6ff">STAGE 01 · MEASURE</text>
+      <text x="126" y="16" class="hud-title">Browser Telemetry Capture</text>
+      <text x="0" y="44" class="hud-desc">Runs Lighthouse and captures browser performance measurements under controlled network &amp; CPU profiles.</text>
+      <text x="0" y="72" class="hud-meta">Engine: Headless Chrome · Profiles: Mobile (4G throttled) &amp; Desktop · Invariant: Empirical facts only, zero speculation</text>
+    </g>
+
+    <!-- Stage 2 HUD -->
+    <g class="h2" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#0e3a54" stroke="#38bdf8" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#38bdf8">STAGE 02 · EVIDENCE</text>
+      <text x="126" y="16" class="hud-title">Telemetry Normalization &amp; Extraction</text>
+      <text x="0" y="44" class="hud-desc">Normalizes metrics, audits, resources, scripts, images, fonts, and long tasks into standardized units (ms).</text>
+      <text x="0" y="72" class="hud-meta">Contract: ZyraEvidence Schema v1.0 · Metrics: LCP, CLS, INP, FCP, TBT, Speed Index · Strict contract validation</text>
+    </g>
+
+    <!-- Stage 3 HUD -->
+    <g class="h3" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#321e54" stroke="#bc8cff" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#bc8cff">STAGE 03 · RULES</text>
+      <text x="126" y="16" class="hud-title">Deterministic Heuristic Evaluation</text>
+      <text x="0" y="44" class="hud-desc">Applies deterministic thresholds and performance rules across metrics, JavaScript execution, networks, fonts, and images.</text>
+      <text x="0" y="72" class="hud-meta">Catalog: 16 Built-in Rules · Severities: CRITICAL, HIGH, WARNING, INFO · Grounded in W3C and Core Web Vitals criteria</text>
+    </g>
+
+    <!-- Stage 4 HUD -->
+    <g class="h4" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#3d2a0c" stroke="#d29922" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#d29922">STAGE 04 · CODEBASE</text>
+      <text x="126" y="16" class="hud-title">Safe Static Workspace Analysis</text>
+      <text x="0" y="44" class="hud-desc">Safely inspects framework, routes, imports, assets, configuration, and project structure without code execution.</text>
+      <text x="0" y="72" class="hud-meta">Guarantees: Strictly read-only · Symlink escape protection · Excludes sensitive secrets (.env, keys) · Size-capped</text>
+    </g>
+
+    <!-- Stage 5 HUD -->
+    <g class="h5" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#2d1c52" stroke="#a371f7" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#a371f7">STAGE 05 · CORRELATE</text>
+      <text x="126" y="16" class="hud-title">Multi-Signal Attribution</text>
+      <text x="0" y="44" class="hud-desc">Connects browser evidence with relevant codebase evidence via bundler-hash stripping and dynamic route matching.</text>
+      <text x="0" y="72" class="hud-meta">Rules: CORR_IMAGE_ASSET, CORR_FONT_ASSET, CORR_SCRIPT_IMPORT, CORR_ROUTE_ENTRY · Bounded confidence [0.0 - 1.0]</text>
+    </g>
+
+    <!-- Stage 6 HUD -->
+    <g class="h6" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#421a32" stroke="#f778ba" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#f778ba">STAGE 06 · DIAGNOSE</text>
+      <text x="126" y="16" class="hud-title">Root-Cause Synthesis</text>
+      <text x="0" y="44" class="hud-desc">Distinguishes observed facts, contributors, supported causes, and uncertainty with explicit confidence levels.</text>
+      <text x="0" y="72" class="hud-meta">Doctrine: Anti-hallucination · Labels unconfirmed anomalies UNKNOWN or INSUFFICIENT_EVIDENCE · Transparent rationale</text>
+    </g>
+
+    <!-- Stage 7 HUD -->
+    <g class="h7" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#143b20" stroke="#3fb950" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#3fb950">STAGE 07 · FIX</text>
+      <text x="126" y="16" class="hud-title">Safe Reversible Fix Planning</text>
+      <text x="0" y="44" class="hud-desc">Creates constrained, safe, reversible fix plans with optimistic concurrency checks and transactional rollback protection.</text>
+      <text x="0" y="72" class="hud-meta">Strategies: 6 Built-in Fix Strategies · Dry-run simulation · SHA-256 preflight content hashes · Atomic rollback journal</text>
+    </g>
+
+    <!-- Stage 8 HUD -->
+    <g class="h8" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#0e3a54" stroke="#38bdf8" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#38bdf8">STAGE 08 · RE-MEASURE</text>
+      <text x="126" y="16" class="hud-title">Post-Fix Empirical Measurement</text>
+      <text x="0" y="44" class="hud-desc">Measures again after changes under identical network conditions, device profiles, and URL origin/pathnames.</text>
+      <text x="0" y="72" class="hud-meta">Execution: Live Chrome run or pre-captured payload · Supports bounded repeat runs (1-5) to identify environmental jitter</text>
+    </g>
+
+    <!-- Stage 9 HUD -->
+    <g class="h9" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#123d1d" stroke="#2ea043" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#2ea043">STAGE 09 · VERIFY</text>
+      <text x="126" y="16" class="hud-title">Empirical Delta &amp; Regression Detection</text>
+      <text x="0" y="44" class="hud-desc">Determines improvement, regression, or inconclusive results against deterministic noise-significance floors.</text>
+      <text x="0" y="72" class="hud-meta">Invariant: APPLIED != IMPROVED · Noise filtering (LCP 100ms, CLS 0.02, TBT 50ms) · Decisions: KEEP_FIX, ROLLBACK_RECOMMENDED</text>
+    </g>
+
+    <!-- Stage 10 HUD -->
+    <g class="h10" transform="translate(24, 20)">
+      <rect width="110" height="22" rx="4" fill="#184224" stroke="#56d364" stroke-width="1" />
+      <text x="55" y="15" text-anchor="middle" class="hud-badge" fill="#56d364">STAGE 10 · CI GATE</text>
+      <text x="126" y="16" class="hud-title">Automated Regression Gating &amp; Budgets</text>
+      <text x="0" y="44" class="hud-desc">Detects performance regressions deterministically in automation against authoritative production baselines.</text>
+      <text x="0" y="72" class="hud-meta">Pipeline Exit Codes: 0=PASS, 1=FAIL, 2=WARN, 3=INCONCLUSIVE, 4=ERROR · Web Vitals budgets · GitHub PR comment markdown</text>
+    </g>
+  </g>
+</svg>
