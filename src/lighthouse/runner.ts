@@ -115,6 +115,7 @@ export async function runLighthouse(
   try {
     // Launch headless Chrome if port not explicitly provided
     if (!options.port) {
+      options.onProgress?.('Launching Chrome browser...');
       const defaultChromeFlags = [
         '--headless=new',
         '--no-sandbox',
@@ -149,6 +150,7 @@ export async function runLighthouse(
 
     const executionPromise = (async () => {
       try {
+        options.onProgress?.('Running Lighthouse audit...');
         const runnerResult = await lighthouse(targetUrl, flags);
         if (!runnerResult || !runnerResult.lhr) {
           throw new LighthouseExecutionError('Lighthouse finished without producing a report.');

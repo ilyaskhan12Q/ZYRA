@@ -9,6 +9,7 @@ import { validateEvidence } from '../evidence/validator.js';
 import { type ZyraEvidence } from '../evidence/types.js';
 import { type DeviceType } from '../lighthouse/types.js';
 import { LighthouseError, InvalidUrlError } from '../lighthouse/errors.js';
+import { createMeasurementProgress } from './progress.js';
 import { RuleEngine } from '../rules/engine.js';
 import { RuleRegistry } from '../rules/registry.js';
 import { FINDING_SCHEMA_VERSION } from '../rules/types.js';
@@ -383,16 +384,22 @@ async function handleMeasureCommand(url: string, args: string[]): Promise<void> 
     workspacePath = args[targetFlagIndex + 1];
   }
 
-  if (!isJson) {
-    console.log(`\n⏳ Launching Lighthouse measurement for ${url} [${device}]...`);
-  }
+  const progress = createMeasurementProgress({
+    url,
+    device,
+    timeoutMs,
+    isJson
+  });
 
   try {
+    progress.start();
     const { evidence } = await collectEvidence({
       url,
       device,
-      timeoutMs
+      timeoutMs,
+      onProgress: (status) => progress.update(status)
     });
+    progress.succeed();
 
     const ruleEngine = new RuleEngine();
     const findings = ruleEngine.evaluate(evidence);
@@ -569,6 +576,7 @@ async function handleMeasureCommand(url: string, args: string[]): Promise<void> 
 ============================================================
 `);
   } catch (error) {
+    progress.fail(error);
     if (isJson) {
       console.error(
         JSON.stringify(
@@ -672,16 +680,23 @@ async function handleFixPlanCommand(args: string[]): Promise<void> {
     process.exit(1);
   }
 
-  try {
-    if (!isJson) {
-      console.log(`\n🔍 Measuring browser telemetry for ${targetUrl} (${device})...`);
-    }
+  const progress = createMeasurementProgress({
+    url: targetUrl,
+    device,
+    timeoutMs,
+    isJson,
+    taskLabel: 'Measuring browser telemetry'
+  });
 
+  try {
+    progress.start();
     const { evidence } = await collectEvidence({
       url: targetUrl,
       device,
-      timeoutMs
+      timeoutMs,
+      onProgress: (status) => progress.update(status)
     });
+    progress.succeed();
 
     const ruleEngine = new RuleEngine();
     const findings = ruleEngine.evaluate(evidence);
@@ -775,6 +790,7 @@ async function handleFixPlanCommand(args: string[]): Promise<void> {
 `);
     }
   } catch (error) {
+    progress.fail(error);
     if (isJson) {
       console.error(
         JSON.stringify(
@@ -1088,15 +1104,31 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
   } else {
     try {
       for (let r = 0; r < runsCount; r++) {
-        const { evidence } = await collectEvidence({
+        const runLabel = runsCount > 1 ? `Measuring post-fix run ${r + 1}/${runsCount}` : 'Measuring post-fix performance';
+        const progress = createMeasurementProgress({
           url: targetUrl,
           device,
-          timeoutMs
+          timeoutMs,
+          isJson,
+          taskLabel: runLabel
         });
-        if (r === 0) {
-          postFixEvidence = evidence;
+        progress.start();
+        try {
+          const { evidence } = await collectEvidence({
+            url: targetUrl,
+            device,
+            timeoutMs,
+            onProgress: (status) => progress.update(status)
+          });
+          progress.succeed();
+          if (r === 0) {
+            postFixEvidence = evidence;
+          }
+          repeatedRunsEvidence.push(evidence);
+        } catch (error) {
+          progress.fail(error);
+          throw error;
         }
-        repeatedRunsEvidence.push(evidence);
       }
     } catch (error) {
       console.error(`❌ Post-fix measurement failed: ${(error as Error).message}`);
@@ -1345,10 +1377,25 @@ async function handleCiBaselineCommand(args: string[]): Promise<void> {
       console.error('❌ Please specify a URL to capture baseline: zyra ci baseline <url> [options]');
       process.exit(1);
     }
+    const progress = createMeasurementProgress({
+      url: targetUrl,
+      device,
+      timeoutMs,
+      isJson,
+      taskLabel: 'Capturing baseline measurement'
+    });
+    progress.start();
     try {
-      const res = await collectEvidence({ url: targetUrl, device, timeoutMs });
+      const res = await collectEvidence({
+        url: targetUrl,
+        device,
+        timeoutMs,
+        onProgress: (status) => progress.update(status)
+      });
+      progress.succeed();
       evidence = res.evidence;
     } catch (err) {
+      progress.fail(err);
       console.error(`❌ Measurement failed: ${(err as Error).message}`);
       process.exit(CI_EXIT_CODES.MEASUREMENT_FAILED);
     }

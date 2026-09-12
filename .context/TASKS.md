@@ -280,4 +280,17 @@
 - [x] Update `docs/REAL-USER-VALIDATION-REPORT.md` with BUG-001 resolution and updated readiness score (88/100)
 - [x] Update persistent context (`.context/`)
 
+---
+
+## UX & RELIABILITY IMPROVEMENTS
+- [x] **Improvement 1: Loading/Progress UX for long Lighthouse runs**
+  - [x] Implement deterministic terminal progress experience (`src/cli/progress.ts`)
+  - [x] Connect `onProgress` callbacks in `runLighthouse` and `collectEvidence`
+  - [x] Real status transitions (Chrome launch -> Lighthouse audit -> Evidence normalization)
+  - [x] Real wall-clock elapsed time ticker in TTY mode and non-TTY fallback
+  - [x] Explicit success, failure, and timeout completion states
+  - [x] Zero fake percentages or invented progress
+  - [x] Strict zero-interference with `--json`
+  - [x] Focused tests in `tests/cli/progress.test.ts` and `tests/cli/cli.test.ts` (337/337 tests passing)
+
 

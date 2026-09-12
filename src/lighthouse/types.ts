@@ -10,6 +10,7 @@ export interface LighthouseRunnerOptions {
   timeoutMs?: number;
   extraChromeFlags?: string[];
   port?: number;
+  onProgress?: (status: string) => void;
 }
 
 export interface LighthouseRunMetadata {

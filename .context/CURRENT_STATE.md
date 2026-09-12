@@ -70,11 +70,20 @@
   - Added schema validation via `validateEvidence` before verification execution.
   - Added defensive null-guards to `createMeasurementSnapshot` and `validateMeasurementCompatibility`.
   - Added 8 dedicated regression tests in `tests/verification/cli.test.ts` covering valid CIBaselines, human formatting, malformed JSON, missing snapshot, missing evidence, invalid evidence data, profile mismatches, and URL mismatches.
+- **CLI Measurement Loading UX (`src/cli/progress.ts`, `src/lighthouse/runner.ts`, `src/evidence/collector.ts`):**
+  - Implemented deterministic terminal progress experience (`MeasurementProgress`) for long-running Lighthouse measurements.
+  - Interactive TTY animated spinner frames with live wall-clock elapsed time updates.
+  - Real status transitions without invented percentages: Chrome launch -> Lighthouse audit -> Evidence processing & validation.
+  - Non-TTY fallback preserving clean logging for CI and piped stdout.
+  - Strict zero-interference with `--json`: machine-readable stdout/stderr streams remain pure JSON.
+  - Clear completion state with exact elapsed duration, plus dedicated timeout/error state handling.
+  - Added 8 tests (6 unit, 2 CLI integration) in `tests/cli/progress.test.ts` and `tests/cli/cli.test.ts`.
 
 ## In Progress
-- None. Bug fix and full revalidation complete.
+- UX & Reliability Improvements (Phase 01: Long Lighthouse runs loading UX completed).
 
 ## Next
+- Subsequent UX/reliability improvements.
 - **Phase 10 — Advanced CDP & Trace Profiling:** Chrome DevTools Protocol tracing, CPU flame graphs, main-thread long task breakdown, and memory leak analysis.
 
 ## Blocked
@@ -88,4 +97,4 @@
 ## Last Verification
 - `npm run typecheck`: Passed (0 errors)
 - `npm run build`: Passed (Clean build in `dist/`)
-- `npm test`: Passed (328 tests passing, 0 failing, 88 suites)
+- `npm test`: Passed (337 tests passing, 0 failing, 89 suites)

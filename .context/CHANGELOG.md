@@ -4,6 +4,17 @@ All notable changes to the ZYRA project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.9.5] - 2026-09-10
+
+### Added
+- **Measurement Loading UX (`src/cli/progress.ts`, `src/lighthouse/runner.ts`, `src/evidence/collector.ts`):**
+  - Deterministic terminal progress experience (`MeasurementProgress`) for long-running Lighthouse measurements.
+  - Interactive TTY spinner frames with live wall-clock elapsed time updates.
+  - Empirical stage notifications (Chrome launch -> Lighthouse audit -> Evidence processing & validation) with zero fake progress percentages.
+  - Clean non-TTY fallback for CI and redirected environments.
+  - Strict zero-interference with `--json`: machine-readable stdout/stderr remain pure JSON.
+  - Clear completion state with exact duration, plus explicit timeout and failure reporting.
+
 ## [0.9.4] - 2026-09-09
 
 ### Fixed
