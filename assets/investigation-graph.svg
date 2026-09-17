@@ -5,7 +5,7 @@
       <circle cx="2" cy="2" r="1" fill="#1e293b" opacity="0.4" />
     </pattern>
 
-    <!-- Clean Solid Styles -->
+    <!-- Clean Solid Styles & Subtle Animation -->
     <style>
       .bg-canvas { fill: #0b0f19; stroke: #1e293b; stroke-width: 1.5px; }
       .bg-panel { fill: #111827; stroke: #1f2937; stroke-width: 1px; }
@@ -13,24 +13,36 @@
       .bg-card-sub { fill: #0b1120; stroke: #1e293b; stroke-width: 1px; }
       
       .lane-title { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; font-weight: 700; fill: #64748b; letter-spacing: 1.2px; text-transform: uppercase; }
-      .lane-boundary { stroke: #1e293b; stroke-width: 1px; stroke-dasharray: 3 3; }
       
-      .node-num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; }
+      .node-num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; font-weight: 700; letter-spacing: 0.5px; fill: #38bdf8; }
       .node-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13px; font-weight: 700; fill: #f8fafc; letter-spacing: 0.2px; }
       .node-desc { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 10.5px; fill: #94a3b8; line-height: 1.4; }
-      .node-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 600; }
+      .node-badge { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px; font-weight: 600; fill: #38bdf8; }
       
-      .wire { stroke: #334155; stroke-width: 1.5px; fill: none; }
-      .wire-accent { stroke: #38bdf8; stroke-width: 1.5px; fill: none; }
-      .wire-feedback { stroke: #f59e0b; stroke-width: 1.5px; stroke-dasharray: 5 4; fill: none; }
-      .wire-gate { stroke: #10b981; stroke-width: 1.5px; fill: none; }
+      .wire-base { stroke: #1e293b; stroke-width: 1.5px; fill: none; }
+      .wire-pulse {
+        stroke: #38bdf8;
+        stroke-width: 1.5px;
+        fill: none;
+        stroke-dasharray: 6 18;
+        animation: signal-flow 1.5s linear infinite;
+      }
+      .wire-feedback-pulse {
+        stroke: #38bdf8;
+        stroke-width: 1.5px;
+        fill: none;
+        stroke-dasharray: 8 20;
+        animation: signal-flow-reverse 2.2s linear infinite;
+      }
       
-      .wire-dot { fill: #475569; }
-      .wire-dot-accent { fill: #38bdf8; }
-      .wire-dot-amber { fill: #f59e0b; }
-      .wire-dot-emerald { fill: #10b981; }
-
-      .mono-text { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+      @keyframes signal-flow {
+        from { stroke-dashoffset: 24; }
+        to { stroke-dashoffset: 0; }
+      }
+      @keyframes signal-flow-reverse {
+        from { stroke-dashoffset: 0; }
+        to { stroke-dashoffset: 28; }
+      }
     </style>
 
     <!-- Arrow Markers -->
@@ -39,15 +51,6 @@
     </marker>
     <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 1 2 L 7 5 L 1 8 Z" fill="#38bdf8" />
-    </marker>
-    <marker id="arrow-amber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 1 2 L 7 5 L 1 8 Z" fill="#f59e0b" />
-    </marker>
-    <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 1 2 L 7 5 L 1 8 Z" fill="#10b981" />
-    </marker>
-    <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 1 2 L 7 5 L 1 8 Z" fill="#c084fc" />
     </marker>
   </defs>
 
@@ -75,62 +78,72 @@
   </g>
 
   <!-- ================= HORIZONTAL STAGE LANES / COLUMNS ================= -->
-  <!-- Lane Columns Background Dividers -->
-  <!-- Col 1: TELEMETRY (X: 32, W: 200) -->
+  <!-- Col 1: INGESTION (X: 32, W: 205) -->
   <rect x="32" y="65" width="205" height="505" rx="6" fill="#0b1120" opacity="0.5" stroke="#1e293b" stroke-width="1" />
   <text x="46" y="85" class="lane-title">01 · INGESTION</text>
 
-  <!-- Col 2: STATIC & HEURISTIC ANALYSIS (X: 252, W: 205) -->
+  <!-- Col 2: ANALYSIS & AST (X: 252, W: 205) -->
   <rect x="252" y="65" width="205" height="505" rx="6" fill="#0b1120" opacity="0.5" stroke="#1e293b" stroke-width="1" />
   <text x="266" y="85" class="lane-title">02 · ANALYSIS &amp; AST</text>
 
-  <!-- Col 3: CORRELATION & DIAGNOSIS (X: 472, W: 205) -->
+  <!-- Col 3: CAUSAL MAPPING (X: 472, W: 205) -->
   <rect x="472" y="65" width="205" height="505" rx="6" fill="#0b1120" opacity="0.5" stroke="#1e293b" stroke-width="1" />
   <text x="486" y="85" class="lane-title">03 · CAUSAL MAPPING</text>
 
-  <!-- Col 4: INTERVENTION & LAB (X: 692, W: 205) -->
+  <!-- Col 4: REMEDIATION (X: 692, W: 205) -->
   <rect x="692" y="65" width="205" height="505" rx="6" fill="#0b1120" opacity="0.5" stroke="#1e293b" stroke-width="1" />
   <text x="706" y="85" class="lane-title">04 · REMEDIATION</text>
 
-  <!-- Col 5: VERIFICATION & CI (X: 912, W: 215) -->
+  <!-- Col 5: PROOF & CI GATE (X: 912, W: 215) -->
   <rect x="912" y="65" width="215" height="505" rx="6" fill="#0b1120" opacity="0.5" stroke="#1e293b" stroke-width="1" />
   <text x="926" y="85" class="lane-title">05 · PROOF &amp; CI GATE</text>
 
 
   <!-- ================= PIPELINE TRACES / WIRES ================= -->
+  <!-- Base Static Routing Lines -->
   <!-- 1. MEASURE -> EVIDENCE -->
-  <path d="M 134 185 V 230" class="wire" marker-end="url(#arrow-slate)" />
+  <path d="M 134 185 V 230" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 134 185 V 230" class="wire-pulse" />
 
-  <!-- 2. EVIDENCE -> Branch to RULES (horizontal right) -->
-  <path d="M 222 280 H 267" class="wire" marker-end="url(#arrow-slate)" />
+  <!-- 2. EVIDENCE -> Branch to RULES -->
+  <path d="M 222 280 H 267" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 222 280 H 267" class="wire-pulse" />
 
-  <!-- 3. EVIDENCE -> Branch down & right to CODEBASE -->
-  <path d="M 134 330 V 435 H 267" class="wire" marker-end="url(#arrow-slate)" />
+  <!-- 3. EVIDENCE -> Branch to CODEBASE -->
+  <path d="M 134 330 V 435 H 267" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 134 330 V 435 H 267" class="wire-pulse" />
 
   <!-- 4. CODEBASE -> CORRELATE -->
-  <path d="M 442 435 H 487" class="wire" marker-end="url(#arrow-slate)" />
+  <path d="M 442 435 H 487" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 442 435 H 487" class="wire-pulse" />
 
-  <!-- 5. RULES -> DIAGNOSE (Down-Right diagonal step) -->
-  <path d="M 442 280 H 465 V 315 H 487" class="wire" marker-end="url(#arrow-slate)" />
+  <!-- 5. RULES -> DIAGNOSE -->
+  <path d="M 442 280 H 465 V 315 H 487" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 442 280 H 465 V 315 H 487" class="wire-pulse" />
 
-  <!-- 6. CORRELATE -> DIAGNOSE (Up-Right diagonal step) -->
-  <path d="M 662 435 H 677 V 345 H 487" class="wire" opacity="0" /> <!-- invisible spacer -->
-  <path d="M 574 380 V 360" class="wire" marker-end="url(#arrow-slate)" />
+  <!-- 6. CORRELATE -> DIAGNOSE -->
+  <path d="M 574 380 V 360" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 574 380 V 360" class="wire-pulse" />
 
   <!-- 7. DIAGNOSE -> FIX -->
-  <path d="M 662 315 H 707" class="wire" marker-end="url(#arrow-slate)" />
+  <path d="M 662 315 H 707" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 662 315 H 707" class="wire-pulse" />
 
   <!-- 8. FIX -> RE-MEASURE -->
-  <path d="M 794 365 V 405" class="wire" marker-end="url(#arrow-slate)" />
+  <path d="M 794 365 V 405" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 794 365 V 405" class="wire-pulse" />
 
   <!-- 9. RE-MEASURE -> VERIFY -->
-  <path d="M 882 455 H 927" class="wire" marker-end="url(#arrow-slate)" />
+  <path d="M 882 455 H 927" class="wire-base" marker-end="url(#arrow-slate)" />
+  <path d="M 882 455 H 927" class="wire-pulse" />
 
   <!-- 10. VERIFY -> CI GATE -->
-  <path d="M 1019 395 V 335" class="wire-gate" marker-end="url(#arrow-emerald)" />
+  <path d="M 1019 395 V 335" class="wire-base" marker-end="url(#arrow-cyan)" />
+  <path d="M 1019 395 V 335" class="wire-pulse" />
 
   <!-- 11. FEEDBACK LOOP (VERIFY -> Rollback/Refine -> MEASURE) -->
-  <path d="M 1019 515 V 545 H 134 V 195" class="wire-feedback" marker-end="url(#arrow-amber)" />
+  <path d="M 1019 515 V 545 H 134 V 195" class="wire-base" stroke-dasharray="4 4" marker-end="url(#arrow-cyan)" />
+  <path d="M 1019 515 V 545 H 134 V 195" class="wire-feedback-pulse" />
 
 
   <!-- ================= STAGE CARDS ================= -->
@@ -139,19 +152,19 @@
   <g transform="translate(46, 105)">
     <rect width="176" height="80" rx="6" class="bg-card" />
     <rect x="0" y="0" width="3" height="80" rx="1.5" fill="#38bdf8" />
-    <text x="14" y="20" class="node-num" fill="#38bdf8">01 // RUNTIME</text>
+    <text x="14" y="20" class="node-num">01 // RUNTIME</text>
     <text x="14" y="40" class="node-title">MEASURE</text>
     <text x="14" y="58" class="node-desc">Lighthouse lab runner</text>
     <text x="14" y="72" class="node-desc">Headless Chrome / CDP</text>
     <rect x="110" y="10" width="54" height="16" rx="3" fill="#0c2338" />
-    <text x="137" y="21" class="node-badge" fill="#38bdf8" text-anchor="middle">4G / CPU</text>
+    <text x="137" y="21" class="node-badge" text-anchor="middle">4G / CPU</text>
   </g>
 
   <!-- [02] EVIDENCE -->
   <g transform="translate(46, 240)">
     <rect width="176" height="90" rx="6" class="bg-card" />
     <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
-    <text x="14" y="20" class="node-num" fill="#38bdf8">02 // TELEMETRY</text>
+    <text x="14" y="20" class="node-num">02 // TELEMETRY</text>
     <text x="14" y="40" class="node-title">EVIDENCE</text>
     <text x="14" y="58" class="node-desc">Extract audits &amp; traces</text>
     <text x="14" y="72" class="node-desc">Normalize into ms &amp; CLS</text>
@@ -162,8 +175,8 @@
   <!-- [03] RULES -->
   <g transform="translate(266, 235)">
     <rect width="176" height="90" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#c084fc" />
-    <text x="14" y="20" class="node-num" fill="#c084fc">03 // HEURISTICS</text>
+    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">03 // HEURISTICS</text>
     <text x="14" y="40" class="node-title">RULES ENGINE</text>
     <text x="14" y="58" class="node-desc">16 deterministic rules</text>
     <text x="14" y="72" class="node-desc">CWV thresholds (LCP/TBT)</text>
@@ -174,20 +187,20 @@
   <!-- [04] CODEBASE SCANNER -->
   <g transform="translate(266, 390)">
     <rect width="176" height="90" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#f59e0b" />
-    <text x="14" y="20" class="node-num" fill="#f59e0b">04 // STATIC AST</text>
+    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">04 // STATIC AST</text>
     <text x="14" y="40" class="node-title">CODEBASE</text>
     <text x="14" y="58" class="node-desc">Framework detection</text>
     <text x="14" y="72" class="node-desc">Routes, imports, assets</text>
     <rect x="14" y="77" width="148" height="2" fill="#1e293b" />
-    <text x="14" y="86" font-family="ui-monospace, monospace" font-size="8.5" fill="#f59e0b">Read-Only Boundary</text>
+    <text x="14" y="86" font-family="ui-monospace, monospace" font-size="8.5" fill="#64748b">Read-Only Boundary</text>
   </g>
 
   <!-- [05] CORRELATE -->
   <g transform="translate(486, 390)">
     <rect width="176" height="90" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#a855f7" />
-    <text x="14" y="20" class="node-num" fill="#a855f7">05 // ATTRIBUTION</text>
+    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">05 // ATTRIBUTION</text>
     <text x="14" y="40" class="node-title">CORRELATE</text>
     <text x="14" y="58" class="node-desc">Bundler hash stripping</text>
     <text x="14" y="72" class="node-desc">URL ➔ source route mapping</text>
@@ -198,8 +211,8 @@
   <!-- [06] DIAGNOSE -->
   <g transform="translate(486, 270)">
     <rect width="176" height="90" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#f43f5e" />
-    <text x="14" y="20" class="node-num" fill="#f43f5e">06 // SYNTHESIS</text>
+    <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">06 // SYNTHESIS</text>
     <text x="14" y="40" class="node-title">DIAGNOSE</text>
     <text x="14" y="58" class="node-desc">Grounded root cause</text>
     <text x="14" y="72" class="node-desc">Confidence score [0.0 - 1.0]</text>
@@ -210,20 +223,20 @@
   <!-- [07] FIX -->
   <g transform="translate(706, 270)">
     <rect width="176" height="95" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="95" rx="1.5" fill="#10b981" />
-    <text x="14" y="20" class="node-num" fill="#10b981">07 // SURGICAL EDIT</text>
+    <rect x="0" y="0" width="3" height="95" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">07 // SURGICAL EDIT</text>
     <text x="14" y="40" class="node-title">FIX PLANNER</text>
     <text x="14" y="58" class="node-desc">Targeted optimizations</text>
     <text x="14" y="72" class="node-desc">SHA-256 preflight checks</text>
     <rect x="14" y="79" width="148" height="2" fill="#1e293b" />
-    <text x="14" y="90" font-family="ui-monospace, monospace" font-size="8.5" fill="#10b981">Transactional Rollback</text>
+    <text x="14" y="90" font-family="ui-monospace, monospace" font-size="8.5" fill="#64748b">Transactional Rollback</text>
   </g>
 
   <!-- [08] RE-MEASURE -->
   <g transform="translate(706, 410)">
     <rect width="176" height="90" rx="6" class="bg-card" />
     <rect x="0" y="0" width="3" height="90" rx="1.5" fill="#38bdf8" />
-    <text x="14" y="20" class="node-num" fill="#38bdf8">08 // LAB TEST</text>
+    <text x="14" y="20" class="node-num">08 // LAB TEST</text>
     <text x="14" y="40" class="node-title">RE-MEASURE</text>
     <text x="14" y="58" class="node-desc">Identical device profile</text>
     <text x="14" y="72" class="node-desc">Bounded repeated runs (1-5)</text>
@@ -234,8 +247,8 @@
   <!-- [09] VERIFY -->
   <g transform="translate(931, 410)">
     <rect width="176" height="105" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="105" rx="1.5" fill="#10b981" />
-    <text x="14" y="20" class="node-num" fill="#10b981">09 // EVALUATION</text>
+    <rect x="0" y="0" width="3" height="105" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">09 // EVALUATION</text>
     <text x="14" y="40" class="node-title">VERIFY</text>
     <text x="14" y="58" class="node-desc">Delta vs noise floor</text>
     <text x="14" y="72" class="node-desc">APPLIED != IMPROVED</text>
@@ -247,25 +260,24 @@
   <!-- [10] CI GATE -->
   <g transform="translate(931, 240)">
     <rect width="176" height="95" rx="6" class="bg-card" />
-    <rect x="0" y="0" width="3" height="95" rx="1.5" fill="#10b981" />
-    <text x="14" y="20" class="node-num" fill="#10b981">10 // PIPELINE</text>
+    <rect x="0" y="0" width="3" height="95" rx="1.5" fill="#38bdf8" />
+    <text x="14" y="20" class="node-num">10 // PIPELINE</text>
     <text x="14" y="40" class="node-title">CI GATE</text>
     <text x="14" y="58" class="node-desc">Strict Web Vitals budgets</text>
     <text x="14" y="72" class="node-desc">Exit codes 0 - 4</text>
     <rect x="14" y="79" width="148" height="2" fill="#1e293b" />
-    <text x="14" y="90" font-family="ui-monospace, monospace" font-size="8.5" fill="#10b981">PASS / WARN / REGRESSION</text>
+    <text x="14" y="90" font-family="ui-monospace, monospace" font-size="8.5" fill="#38bdf8">PASS / WARN / REGRESSION</text>
   </g>
 
   <!-- Feedback Loop Callout Badge -->
   <g transform="translate(435, 535)">
-    <rect width="290" height="20" rx="4" fill="#181308" stroke="#f59e0b" stroke-width="1" />
-    <text x="145" y="14" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700" fill="#f59e0b" text-anchor="middle">↺ FEEDBACK LOOP: APPLIED != IMPROVED</text>
+    <rect width="290" height="20" rx="4" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+    <text x="145" y="14" font-family="ui-monospace, monospace" font-size="9.5" font-weight="700" fill="#38bdf8" text-anchor="middle">↺ FEEDBACK LOOP: APPLIED != IMPROVED</text>
   </g>
 
 
-  <!-- ================= DIAGNOSTIC ARTIFACTS & OUTPUT TIER (NEW SECTION) ================= -->
+  <!-- ================= DIAGNOSTIC ARTIFACTS & OUTPUT TIER ================= -->
   <g transform="translate(32, 585)">
-    <!-- Subsystem Container Box -->
     <rect width="1095" height="130" rx="6" class="bg-panel" />
     
     <!-- Title Bar -->
@@ -278,7 +290,7 @@
     <!-- Artifact Card 1: JSON Schemas v1.0 -->
     <g transform="translate(18, 38)">
       <rect width="345" height="76" rx="4" class="bg-card-sub" />
-      <text x="14" y="20" class="node-num" fill="#38bdf8">01 // MACHINE CONTRACT</text>
+      <text x="14" y="20" class="node-num">01 // MACHINE CONTRACT</text>
       <text x="14" y="38" class="node-title" font-size="12">Structured JSON Schemas v1.0</text>
       <text x="14" y="54" class="node-desc">ZyraEvidence · Finding[] · CorrelationResult</text>
       <text x="14" y="68" class="node-desc">FixPlan · VerificationResult · CIResult</text>
@@ -287,7 +299,7 @@
     <!-- Artifact Card 2: Markdown Investigation Reports -->
     <g transform="translate(383, 38)">
       <rect width="345" height="76" rx="4" class="bg-card-sub" />
-      <text x="14" y="20" class="node-num" fill="#c084fc">02 // HUMAN / AGENT REPORT</text>
+      <text x="14" y="20" class="node-num">02 // HUMAN / AGENT REPORT</text>
       <text x="14" y="38" class="node-title" font-size="12">Markdown Summary &amp; Diff Logs</text>
       <text x="14" y="54" class="node-desc">Root-cause attribution breakdown table</text>
       <text x="14" y="68" class="node-desc">Before/After metrics &amp; noise significance delta</text>
@@ -296,7 +308,7 @@
     <!-- Artifact Card 3: CI/CD & PR Automation -->
     <g transform="translate(748, 38)">
       <rect width="330" height="76" rx="4" class="bg-card-sub" />
-      <text x="14" y="20" class="node-num" fill="#10b981">03 // AUTOMATION BOT</text>
+      <text x="14" y="20" class="node-num">03 // AUTOMATION BOT</text>
       <text x="14" y="38" class="node-title" font-size="12">GitHub PR Comments &amp; CI Checks</text>
       <text x="14" y="54" class="node-desc">Automated sticky PR performance summaries</text>
       <text x="14" y="68" class="node-desc">Deterministic exit status &amp; budget gating</text>
