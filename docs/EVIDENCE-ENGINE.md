@@ -51,7 +51,7 @@ The runner abstraction (`src/lighthouse/runner.ts`) provides isolated, lifecycle
 * **Device Profiles:**
   * **`mobile` (Default):** Mobile viewport emulation (412x823, scale factor 1.75) and simulated 4G mobile network/CPU throttling (4x CPU slowdown).
   * **`desktop`:** Desktop viewport emulation (1350x940, scale factor 1.0) and desktop-grade throttling.
-* **Timeout Protection:** Configurable timeout (default 60s) preventing hangs on unresponsive endpoints.
+* **Timeout Protection:** Configurable timeout (default 90s) preventing hangs on unresponsive endpoints. Heavy applications under mobile emulation can configure `--timeout <ms>` or use `--desktop` for unthrottled profiling.
 
 ---
 

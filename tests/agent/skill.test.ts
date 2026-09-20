@@ -107,7 +107,7 @@ describe('Agent Skill & /zyra Packaging — Phase 06 Verification', () => {
       const raw = await fs.readFile(packageJsonPath, 'utf-8');
       const pkg = JSON.parse(raw);
       assert.ok(pkg.name === 'zyra' || pkg.name === '@ilyaskhan12q/zyra', 'package name must be zyra or scoped @ilyaskhan12q/zyra');
-      assert.equal(pkg.version, '0.9.3');
+      assert.equal(pkg.version, '0.9.4');
       assert.ok(pkg.bin, 'package.json must contain bin field');
       assert.equal(pkg.bin.zyra, './dist/src/cli/index.js');
     });
@@ -138,7 +138,7 @@ describe('Agent Skill & /zyra Packaging — Phase 06 Verification', () => {
         { cwd: os.tmpdir() }
       );
       assert.equal(stderr, '');
-      assert.ok(stdout.includes('zyra v0.9.3'));
+      assert.ok(stdout.includes('zyra v0.9.4'));
     });
 
     it('executes zyra --help cleanly from outside the repository (/tmp)', async () => {
@@ -148,7 +148,7 @@ describe('Agent Skill & /zyra Packaging — Phase 06 Verification', () => {
         { cwd: os.tmpdir() }
       );
       assert.equal(stderr, '');
-      assert.ok(stdout.includes('ZYRA — Agent-Native Web Performance Investigation Tool (v0.9.3)'));
+      assert.ok(stdout.includes('ZYRA — Agent-Native Web Performance Investigation Tool (v0.9.4)'));
       assert.ok(stdout.includes('USAGE:'));
       assert.ok(stdout.includes('zyra analyze <url> --workspace <path>'));
     });
@@ -184,7 +184,7 @@ describe('Agent Skill & /zyra Packaging — Phase 06 Verification', () => {
         { cwd: os.tmpdir() }
       );
       assert.equal(stderr, '');
-      assert.ok(stdout.includes('zyra v0.9.3'));
+      assert.ok(stdout.includes('zyra v0.9.4'));
     });
   });
 

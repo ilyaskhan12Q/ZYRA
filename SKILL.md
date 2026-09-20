@@ -6,7 +6,7 @@ description: Agent-native web performance investigation and optimization tool. M
 # ZYRA — Agent Skill Guide
 
 **Skill Version:** 1.0  
-**Target System:** ZYRA v0.9.3  
+**Target System:** ZYRA v0.9.4  
 **Interface:** `/zyra`  
 **Execution Model:** Local-First, Deterministic, Read-Only (Phase 06/09) / Safe Modification (Phase 07)
 

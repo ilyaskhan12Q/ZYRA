@@ -19,7 +19,7 @@ import {
 } from './types.js';
 import { validateCIBaseline, CIValidationError } from './validator.js';
 
-const CURRENT_ZYRA_VERSION = '0.9.3';
+const CURRENT_ZYRA_VERSION = '0.9.4';
 
 /**
  * Creates an authoritative CIBaseline object from ZyraEvidence.

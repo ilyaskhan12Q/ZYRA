@@ -46,7 +46,7 @@ import {
   type CIResult
 } from '../ci/index.js';
 
-const VERSION = '0.9.3';
+const VERSION = '0.9.4';
 
 function printHelp(): void {
   console.log(`

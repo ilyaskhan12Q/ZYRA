@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/username/zyra/actions"><img src="https://img.shields.io/badge/CI-Passing-3fb950?style=flat-square&logo=githubactions&logoColor=white" alt="CI Status" /></a>
-  <a href="package.json"><img src="https://img.shields.io/badge/version-0.9.3-58a6ff?style=flat-square" alt="Version" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/version-0.9.4-58a6ff?style=flat-square" alt="Version" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D22.0.0-f0883e?style=flat-square&logo=node.js&logoColor=white" alt="Node Engine" /></a>
   <a href="tests"><img src="https://img.shields.io/badge/tests-337%20passing-3fb950?style=flat-square" alt="Test Suite" /></a>
   <a href=".context/CURRENT_STATE.md"><img src="https://img.shields.io/badge/phase-09%20CI%20Subsystem-a371f7?style=flat-square" alt="Current Phase" /></a>
@@ -399,7 +399,7 @@ npm link
 ```bash
 # Verify CLI accessibility
 zyra --version
-# => zyra v0.9.3
+# => zyra v0.9.4
 
 # Check command help
 zyra --help
