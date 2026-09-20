@@ -107,7 +107,7 @@ export async function runLighthouse(
   validateTargetUrl(targetUrl);
 
   const device: DeviceType = options.device ?? 'mobile';
-  const timeoutMs = options.timeoutMs ?? 60000;
+  const timeoutMs = options.timeoutMs ?? 90000;
 
   let chrome: chromeLauncher.LaunchedChrome | null = null;
   const startTime = Date.now();

@@ -28,7 +28,11 @@ export class ChromeLaunchError extends LighthouseError {
 
 export class LighthouseTimeoutError extends LighthouseError {
   constructor(public readonly timeoutMs: number) {
-    super(`Lighthouse measurement timed out after ${timeoutMs / 1000}s.`);
+    super(
+      `Lighthouse measurement timed out after ${timeoutMs / 1000}s. Heavy sites under mobile emulation may require extra time (try --timeout ${Math.round(
+        (timeoutMs * 1.5) / 1000
+      )}000) or desktop profiling (try --desktop for unthrottled evaluation).`
+    );
     this.name = 'LighthouseTimeoutError';
   }
 }

@@ -29,7 +29,7 @@ export async function runCI(options: CIRunOptions): Promise<CIResult> {
   const {
     targetUrl,
     device = 'mobile',
-    timeoutMs = 60000,
+    timeoutMs = 90000,
     policy = {},
     budgetConfig = DEFAULT_BUDGET_CONFIG,
     id = `ci_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,

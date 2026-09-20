@@ -46,7 +46,7 @@ import {
   type CIResult
 } from '../ci/index.js';
 
-const VERSION = '0.9.3';
+const VERSION = '0.9.4';
 
 function printHelp(): void {
   console.log(`
@@ -103,7 +103,7 @@ MEASUREMENT OPTIONS:
   --mobile           Emulate mobile device profile (default)
   --desktop          Emulate desktop device profile
   --json             Output normalized evidence, findings, and correlation as structured JSON
-  --timeout <ms>     Set execution timeout in milliseconds (default: 60000)
+  --timeout <ms>     Set execution timeout in milliseconds (default: 90000)
 
 CODEBASE OPTIONS:
   --json            Output complete Codebase Evidence as structured JSON
@@ -366,7 +366,7 @@ async function handleMeasureCommand(url: string, args: string[]): Promise<void> 
   const isDesktop = args.includes('--desktop');
   const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
 
-  let timeoutMs = 60000;
+  let timeoutMs = 90000;
   const timeoutIndex = args.indexOf('--timeout');
   if (timeoutIndex !== -1 && args[timeoutIndex + 1]) {
     const parsedTimeout = parseInt(args[timeoutIndex + 1], 10);
@@ -644,7 +644,7 @@ async function handleFixPlanCommand(args: string[]): Promise<void> {
   const isDesktop = args.includes('--desktop');
   const device: DeviceType = isDesktop ? 'desktop' : 'mobile';
 
-  let timeoutMs = 60000;
+  let timeoutMs = 90000;
   const timeoutIdx = args.indexOf('--timeout');
   if (timeoutIdx !== -1 && args[timeoutIdx + 1]) {
     const parsed = parseInt(args[timeoutIdx + 1]!, 10);
@@ -992,7 +992,7 @@ async function handleVerifyCommand(args: string[]): Promise<void> {
   let targetMetricArg: string | undefined;
   let outputPath: string | undefined;
   let runsCount = 1;
-  let timeoutMs = 60000;
+  let timeoutMs = 90000;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -1309,7 +1309,7 @@ OPTIONS:
   --desktop                   Emulate desktop device profile
   --fail-on-warn              Elevate WARN exit code (2) to FAIL exit code (1)
   --allow-missing-baseline    Do not fail if baseline is missing; evaluate budgets only
-  --timeout <ms>              Browser measurement timeout in milliseconds (default: 60000)
+  --timeout <ms>              Browser measurement timeout in milliseconds (default: 90000)
   --json                      Output machine-readable CIResult JSON
 
 EXIT CODES:
@@ -1332,7 +1332,7 @@ async function handleCiBaselineCommand(args: string[]): Promise<void> {
   const currentPath = currentIdx !== -1 && args[currentIdx + 1] ? args[currentIdx + 1] : undefined;
 
   const timeoutIdx = args.indexOf('--timeout');
-  const timeoutMs = timeoutIdx !== -1 && args[timeoutIdx + 1] ? parseInt(args[timeoutIdx + 1], 10) : 60000;
+  const timeoutMs = timeoutIdx !== -1 && args[timeoutIdx + 1] ? parseInt(args[timeoutIdx + 1], 10) : 90000;
 
   // Find URL
   let targetUrl = args.find((a, idx) => {
@@ -1480,7 +1480,7 @@ async function handleCiCommand(args: string[]): Promise<void> {
   const currentPath = currentIdx !== -1 && effectiveArgs[currentIdx + 1] ? effectiveArgs[currentIdx + 1] : undefined;
 
   const timeoutIdx = effectiveArgs.indexOf('--timeout');
-  const timeoutMs = timeoutIdx !== -1 && effectiveArgs[timeoutIdx + 1] ? parseInt(effectiveArgs[timeoutIdx + 1], 10) : 60000;
+  const timeoutMs = timeoutIdx !== -1 && effectiveArgs[timeoutIdx + 1] ? parseInt(effectiveArgs[timeoutIdx + 1], 10) : 90000;
 
   // Find target URL: either from --url flag or first non-flag argument
   const urlFlagIdx = effectiveArgs.indexOf('--url');

@@ -95,7 +95,7 @@ function createSampleCIBaseline(): CIBaseline {
     normalizedUrl: 'https://example.com',
     device: 'mobile',
     timestamp: '2026-09-08T12:00:00.000Z',
-    zyraVersion: '0.9.3',
+    zyraVersion: '0.9.4',
     metrics: {
       fcp: 1700,
       lcp: 2400,
