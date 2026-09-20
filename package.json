@@ -1,5 +1,5 @@
 {
-  "name": "zyra",
+  "name": "@ilyaskhan12q/zyra",
   "version": "0.9.4",
   "description": "Agent-native web performance investigation and optimization tool",
   "type": "module",
@@ -9,18 +9,42 @@
     "zyra": "./dist/src/cli/index.js"
   },
   "files": [
-    "dist",
+    "dist/src",
     "README.md",
     "CONTRIBUTING.md",
     "CODE_OF_CONDUCT.md",
     "LICENSE",
     "SKILL.md",
-    ".context",
-    "docs"
+    "assets/investigation-graph.svg",
+    "assets/zyra-logo.svg"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ilyaskhan12Q/ZYRA.git"
+  },
+  "homepage": "https://github.com/ilyaskhan12Q/ZYRA#readme",
+  "bugs": {
+    "url": "https://github.com/ilyaskhan12Q/ZYRA/issues"
+  },
+  "keywords": [
+    "performance",
+    "web-vitals",
+    "lighthouse",
+    "investigation",
+    "ai-agents",
+    "core-web-vitals",
+    "optimization",
+    "lcp",
+    "cls",
+    "inp"
   ],
   "scripts": {
     "build": "tsc",
     "postbuild": "chmod +x dist/src/cli/index.js",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "test": "node --test dist/tests/**/*.test.js",
     "test:unit": "node --test dist/tests/context/**/*.test.js dist/tests/cli/**/*.test.js dist/tests/evidence/**/*.test.js dist/tests/rules/**/*.test.js dist/tests/codebase/**/*.test.js dist/tests/correlation/**/*.test.js dist/tests/agent/**/*.test.js dist/tests/fixes/**/*.test.js dist/tests/verification/**/*.test.js dist/tests/ci/**/*.test.js",
