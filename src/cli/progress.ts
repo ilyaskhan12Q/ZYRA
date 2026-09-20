@@ -33,7 +33,7 @@ export class MeasurementProgress {
   constructor(options: MeasurementProgressOptions) {
     this.url = options.url;
     this.device = options.device ?? 'mobile';
-    this.timeoutMs = options.timeoutMs ?? 60000;
+    this.timeoutMs = options.timeoutMs ?? 90000;
     this.isJson = Boolean(options.isJson);
     this.stream = options.stream ?? process.stdout;
     this.isTTY = options.isTTY ?? Boolean(this.stream.isTTY);
