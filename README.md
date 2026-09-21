@@ -445,24 +445,6 @@ npx zyra --help
 
 ---
 
-## Project Status & Roadmap
-
-| Phase | Milestone | Status |
-| :---: | :--- | :---: |
-| **01** | Core Foundation & Workspace Contracts | Completed |
-| **02** | Persistent Context System (`.context/`) | Completed |
-| **03** | Measurement Layer & Evidence Normalizer | Completed |
-| **04** | Codebase Investigation Subsystem | Completed |
-| **05** | Deterministic Rule Engine (16 Rules) | Completed |
-| **06** | Evidence Correlation & Root-Cause Analysis | Completed |
-| **07** | Fix Engine & Safe Reversible Modifications | Completed |
-| **08** | Verification Layer & Noise-Filtered Telemetry | Completed |
-| **09** | CI / Regression Detection & Performance Budgets | Completed |
-| **Current** | CLI UX & Measurement Loading UX Improvements | Active |
-| **10** | Advanced Browser & DevTools Integration (CDP Tracing, CPU Flame Graphs) | Planned |
-
----
-
 ## Documentation & Architecture
 
 Comprehensive technical specifications and subsystem documentation:
